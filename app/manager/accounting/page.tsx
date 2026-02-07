@@ -246,7 +246,7 @@ export default function ManagerAccounting() {
     .filter(e => e.type === 'expense')
     .reduce((sum, e) => sum + e.amount, 0) + monthlyBookingExpenses;
 
-  // Generate automatic cashflow entries from bookings
+  // Generate combined cashflow entries from bookings and manual entries
   const generateCashFlowEntries = () => {
     const entries = [];
 
@@ -263,7 +263,7 @@ export default function ManagerAccounting() {
           category: 'booking_income',
           date: eventDate,
           bookingId: booking.id,
-          notes: `Package: ${booking.packageName}`,
+          notes: `Package: ${booking.packageName || 'N/A'}`,
           source: 'booking',
         });
       });
@@ -281,14 +281,22 @@ export default function ManagerAccounting() {
           category: 'booking_expense',
           date: eventDate,
           bookingId: booking.id,
-          notes: `Event expenses for ${booking.packageName}`,
+          notes: `Event expenses for ${booking.packageName || 'N/A'}`,
           source: 'booking',
         });
       });
 
+    // Add manual cash flow entries for the month
+    monthlyCashFlowEntries.forEach(entry => {
+      entries.push({
+        ...entry,
+        source: 'manual',
+      });
+    });
+
     return entries.sort((a, b) => {
-      const dateA = a.date?.getTime?.() || new Date(a.date).getTime();
-      const dateB = b.date?.getTime?.() || new Date(b.date).getTime();
+      const dateA = a.date?.toDate?.() || a.date?.getTime?.() || new Date(a.date).getTime();
+      const dateB = b.date?.toDate?.() || b.date?.getTime?.() || new Date(b.date).getTime();
       return dateB - dateA;
     });
   };
@@ -569,6 +577,66 @@ export default function ManagerAccounting() {
     document.body.removeChild(element);
   };
 
+  // Handle Add Cash Flow Entry
+  const handleAddCashFlow = async () => {
+    if (!managerUser) return;
+    
+    // Validation
+    if (!newEntry.amount || parseFloat(newEntry.amount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+    if (!newEntry.description.trim()) {
+      alert('Please enter a description');
+      return;
+    }
+    if (!newEntry.category) {
+      alert('Please select a category');
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'cashFlow'), {
+        type: newEntry.type,
+        amount: parseFloat(newEntry.amount),
+        description: newEntry.description.trim(),
+        category: newEntry.category,
+        notes: newEntry.notes.trim(),
+        date: new Date(),
+        managerId: managerUser.uid,
+        createdAt: new Date(),
+      });
+
+      // Reset form
+      setNewEntry({
+        type: 'expense',
+        amount: '',
+        description: '',
+        category: '',
+        notes: '',
+      });
+      setShowAddCashFlow(false);
+      
+      alert('Cash flow entry added successfully!');
+    } catch (error) {
+      console.error('Error adding cash flow entry:', error);
+      alert('Failed to add cash flow entry. Please try again.');
+    }
+  };
+
+  // Handle Delete Cash Flow Entry
+  const handleDeleteCashFlow = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this entry?')) return;
+
+    try {
+      await deleteDoc(doc(db, 'cashFlow', id));
+      alert('Cash flow entry deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting cash flow entry:', error);
+      alert('Failed to delete entry. Please try again.');
+    }
+  };
+
   return (
     <ManagerSidebar>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
@@ -639,7 +707,7 @@ export default function ManagerAccounting() {
                   <p className="text-gray-600 text-xs font-semibold">Monthly Paid</p>
                   <p className="text-2xl font-bold text-gray-900">₱{monthlyPaidAmount.toLocaleString()}.00</p>
                 </div>
-                <TrendingUp size={32} className="text-green-500" />
+                <TrendingUp size={32} className="text-green-500" />\ 
               </div>
             </div>
 
@@ -705,49 +773,49 @@ export default function ManagerAccounting() {
               animate={{ opacity: 1 }}
               className="grid grid-cols-1 lg:grid-cols-2 gap-6"
             >
-              {/* All Time Summary */}
+              {/* Monthly Summary */}
               <div className="bg-white rounded-xl p-6 shadow-lg">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">All Time Summary</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">This Month Summary</h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                     <span className="font-semibold text-gray-700">Total Revenue:</span>
-                    <span className="text-lg font-bold text-blue-600">₱{allTimeRevenue.toLocaleString()}.00</span>
+                    <span className="text-lg font-bold text-blue-600">₱{monthlyRevenue.toLocaleString()}.00</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                     <span className="font-semibold text-gray-700">Total Collected:</span>
-                    <span className="text-lg font-bold text-green-600">₱{allTimePaid.toLocaleString()}.00</span>
+                    <span className="text-lg font-bold text-green-600">₱{monthlyPaidAmount.toLocaleString()}.00</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
                     <span className="font-semibold text-gray-700">Total Outstanding:</span>
-                    <span className="text-lg font-bold text-yellow-600">₱{allTimeOutstanding.toLocaleString()}.00</span>
+                    <span className="text-lg font-bold text-yellow-600">₱{monthlyOutstanding.toLocaleString()}.00</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
                     <span className="font-semibold text-gray-700">Total Expenses:</span>
-                    <span className="text-lg font-bold text-red-600">₱{allTimeExpenses.toLocaleString()}.00</span>
+                    <span className="text-lg font-bold text-red-600">₱{monthlyExpenses.toLocaleString()}.00</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border-2 border-purple-200">
                     <span className="font-bold text-gray-900">NET PROFIT:</span>
-                    <span className="text-xl font-bold text-purple-600">₱{allTimeProfit.toLocaleString()}.00</span>
+                    <span className="text-xl font-bold text-purple-600">₱{monthlyProfit.toLocaleString()}.00</span>
                   </div>
                 </div>
               </div>
 
               {/* Collection Rate */}
               <div className="bg-white rounded-xl p-6 shadow-lg">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Collection Metrics</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Collection Metrics (This Month)</h3>
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="font-semibold text-gray-700">Collection Rate (All Time)</span>
+                      <span className="font-semibold text-gray-700">Collection Rate</span>
                       <span className="text-lg font-bold text-blue-600">
-                        {allTimeRevenue > 0 ? ((allTimePaid / allTimeRevenue) * 100).toFixed(1) : 0}%
+                        {monthlyRevenue > 0 ? ((monthlyPaidAmount / monthlyRevenue) * 100).toFixed(1) : 0}%
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-4">
                       <div
                         className="bg-gradient-to-r from-blue-500 to-blue-600 h-4 rounded-full"
                         style={{
-                          width: allTimeRevenue > 0 ? ((allTimePaid / allTimeRevenue) * 100) + '%' : 0,
+                          width: monthlyRevenue > 0 ? ((monthlyPaidAmount / monthlyRevenue) * 100) + '%' : 0,
                         }}
                       />
                     </div>
@@ -757,14 +825,14 @@ export default function ManagerAccounting() {
                     <div className="flex justify-between mb-2">
                       <span className="font-semibold text-gray-700">Outstanding Rate</span>
                       <span className="text-lg font-bold text-yellow-600">
-                        {allTimeRevenue > 0 ? ((allTimeOutstanding / allTimeRevenue) * 100).toFixed(1) : 0}%
+                        {monthlyRevenue > 0 ? ((monthlyOutstanding / monthlyRevenue) * 100).toFixed(1) : 0}%
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-4">
                       <div
                         className="bg-yellow-500 h-4 rounded-full"
                         style={{
-                          width: allTimeRevenue > 0 ? ((allTimeOutstanding / allTimeRevenue) * 100) + '%' : 0,
+                          width: monthlyRevenue > 0 ? ((monthlyOutstanding / monthlyRevenue) * 100) + '%' : 0,
                         }}
                       />
                     </div>
@@ -773,10 +841,10 @@ export default function ManagerAccounting() {
                   <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600 mb-3 font-semibold">Key Metrics:</p>
                     <div className="space-y-2 text-sm">
-                      <p><span className="font-semibold">Confirmed Bookings:</span> {bookings.filter(b => b.status === 'confirmed').length}</p>
-                      <p><span className="font-semibold">Fully Paid:</span> {bookings.filter(b => b.paymentStatus === 'paid').length}</p>
-                      <p><span className="font-semibold">Partial Payment:</span> {bookings.filter(b => b.paymentStatus === 'partial').length}</p>
-                      <p><span className="font-semibold">Pending Payment:</span> {bookings.filter(b => b.paymentStatus === 'pending').length}</p>
+                      <p><span className="font-semibold">Confirmed Bookings:</span> {monthlyBookings.filter(b => b.status === 'confirmed').length}</p>
+                      <p><span className="font-semibold">Fully Paid:</span> {monthlyBookings.filter(b => b.paymentStatus === 'paid').length}</p>
+                      <p><span className="font-semibold">Partial Payment:</span> {monthlyBookings.filter(b => b.paymentStatus === 'partial').length}</p>
+                      <p><span className="font-semibold">Pending Payment:</span> {monthlyBookings.filter(b => b.paymentStatus === 'pending').length}</p>
                     </div>
                   </div>
                 </div>
@@ -966,15 +1034,24 @@ export default function ManagerAccounting() {
                 </div>
               </div>
 
-              {/* Automatic Entries Info */}
-              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 flex items-start gap-3 justify-between">
+              {/* Add Manual Entry Button */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4 flex items-start gap-3 justify-between">
                 <div className="flex items-start gap-3 flex-1">
                   <FileText className="text-blue-600 mt-1" size={20} />
                   <div>
-                    <p className="text-blue-900 font-semibold">Automatic Cashflow Ledger</p>
-                    <p className="text-blue-700 text-sm mt-1">All income and expenses are automatically tracked from confirmed bookings. Every transaction is recorded below in chronological order.</p>
+                    <p className="text-blue-900 font-semibold">Cash Flow Management</p>
+                    <p className="text-blue-700 text-sm mt-1">Track all income and expenses. Booking transactions are automatic, but you can also add manual entries for other business expenses.</p>
                   </div>
                 </div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowAddCashFlow(!showAddCashFlow)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity whitespace-nowrap"
+                >
+                  <Plus size={20} />
+                  Add Entry
+                </motion.button>
               </div>
 
               {/* Filters and Actions */}
@@ -1125,13 +1202,21 @@ export default function ManagerAccounting() {
                 </motion.div>
               )}
 
-              {/* Automatic Cashflow Entries List */}
+              {/* Cashflow Entries List */}
               <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div className="p-4 bg-gray-50 border-b border-gray-200">
+                  <h3 className="text-lg font-bold text-gray-900">Transaction History</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {automaticCashFlowEntries.length} transactions • 
+                    {automaticCashFlowEntries.filter(e => e.source === 'booking').length} from bookings • 
+                    {automaticCashFlowEntries.filter(e => e.source === 'manual').length} manual entries
+                  </p>
+                </div>
                 {automaticCashFlowEntries.length === 0 ? (
                   <div className="p-12 text-center">
                     <FileText size={48} className="mx-auto text-gray-300 mb-4" />
                     <p className="text-gray-600 text-lg font-medium">No transactions this month</p>
-                    <p className="text-gray-400 text-sm mt-2">Confirmed bookings will appear here automatically</p>
+                    <p className="text-gray-400 text-sm mt-2">Confirmed bookings and manual entries will appear here</p>
                   </div>
                 ) : (
                   <div className="divide-y">
@@ -1141,30 +1226,56 @@ export default function ManagerAccounting() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.03 }}
-                        className="p-5 hover:bg-gray-50 transition-colors flex items-center justify-between"
+                        className="p-5 hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
                       >
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${entry.type === 'income' ? 'bg-green-100' : 'bg-red-100'}`}>
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${entry.type === 'income' ? 'bg-green-100' : 'bg-red-100'}`}>
                               {entry.type === 'income' ? (
                                 <TrendingUp size={20} className="text-green-600" />
                               ) : (
                                 <TrendingDown size={20} className="text-red-600" />
                               )}
                             </div>
-                            <div>
-                              <p className="font-semibold text-gray-900">{entry.description}</p>
-                              <p className="text-sm text-gray-600">{entry.notes} • {format(entry.date, 'MMM dd, yyyy')}</p>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-semibold text-gray-900">{entry.description}</p>
+                                {entry.source === 'manual' && (
+                                  <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded bg-blue-100 text-blue-700">
+                                    Manual
+                                  </span>
+                                )}
+                                {entry.source === 'booking' && (
+                                  <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded bg-purple-100 text-purple-700">
+                                    Auto
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 truncate">{entry.notes} • {format(entry.date?.toDate?.() || new Date(entry.date), 'MMM dd, yyyy')}</p>
+                              <p className="text-xs text-gray-500 capitalize mt-1">{entry.category.replace(/_/g, ' ')}</p>
                             </div>
                           </div>
                         </div>
-                        <div className="text-right ml-4">
-                          <p className={`text-lg font-bold ${entry.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                            {entry.type === 'income' ? '+' : '-'}₱{entry.amount.toLocaleString()}.00
-                          </p>
-                          <span className={`inline-block mt-1 px-2 py-1 text-xs font-semibold rounded ${entry.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {entry.type === 'income' ? 'Income' : 'Expense'}
-                          </span>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className={`text-lg font-bold ${entry.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                              {entry.type === 'income' ? '+' : '-'}₱{entry.amount.toLocaleString()}.00
+                            </p>
+                            <span className={`inline-block mt-1 px-2 py-1 text-xs font-semibold rounded ${entry.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              {entry.type === 'income' ? 'Income' : 'Expense'}
+                            </span>
+                          </div>
+                          {entry.source === 'manual' && (
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleDeleteCashFlow(entry.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete entry"
+                            >
+                              <Trash2 size={18} />
+                            </motion.button>
+                          )}
                         </div>
                       </motion.div>
                     ))}
