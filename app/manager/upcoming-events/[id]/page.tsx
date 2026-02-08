@@ -95,6 +95,7 @@ export default function EventDetailPage() {
   // Complete event state
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [finalPaymentAmount, setFinalPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'check' | 'bank_transfer'>('cash');
 
   // Reschedule state
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
@@ -107,6 +108,9 @@ export default function EventDetailPage() {
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<string>('');
+
+  // Invoice type modal state
+  const [showInvoiceTypeModal, setShowInvoiceTypeModal] = useState(false);
 
   useEffect(() => {
     if (!loading && (!managerUser || !isManager)) {
@@ -292,18 +296,37 @@ export default function EventDetailPage() {
   };
 
   const handleCompleteEvent = async () => {
-    if (!booking || !finalPaymentAmount) {
-      alert('Please enter the final payment amount');
+    if (!booking) {
+      alert('Booking data not found');
       return;
     }
 
-    const finalPayment = parseFloat(finalPaymentAmount);
     const initialDownpayment = booking.downpayment || 0;
-    const totalPayments = initialDownpayment + finalPayment;
     const finalPrice = booking.finalPrice || booking.totalPrice || 0;
+    const rescheduleFee = booking.rescheduleFee || 0;
+    const totalDue = finalPrice + rescheduleFee;
+    
+    // If no final payment amount is entered, assume it's 0 (already fully paid)
+    const finalPayment = finalPaymentAmount ? parseFloat(finalPaymentAmount) : 0;
+    const totalPayments = initialDownpayment + finalPayment;
 
-    if (Math.abs(totalPayments - finalPrice) > 0.01) {
-      alert(`Payment mismatch! Initial downpayment (₱${initialDownpayment.toLocaleString()}.00) + Final payment (₱${finalPayment.toLocaleString()}.00) = ₱${totalPayments.toLocaleString()}.00, but Total should be ₱${finalPrice.toLocaleString()}.00`);
+    // Check if already fully paid
+    const remainingBalance = totalDue - initialDownpayment;
+    
+    if (remainingBalance < 0) {
+      alert(`Error: Down payment (₱${initialDownpayment.toLocaleString()}.00) exceeds total due (₱${totalDue.toLocaleString()}.00)`);
+      return;
+    }
+
+    // If there's a remaining balance but no final payment entered
+    if (remainingBalance > 0.01 && finalPayment === 0) {
+      alert(`Please enter the final payment amount. Remaining balance: ₱${remainingBalance.toLocaleString()}.00`);
+      return;
+    }
+
+    // Check if payment matches (with small tolerance for floating point)
+    if (Math.abs(totalPayments - totalDue) > 0.01) {
+      alert(`Payment mismatch!\n\nTotal Due: ₱${totalDue.toLocaleString()}.00\nDown Payment: ₱${initialDownpayment.toLocaleString()}.00\nFinal Payment: ₱${finalPayment.toLocaleString()}.00\nTotal Paid: ₱${totalPayments.toLocaleString()}.00\n\nRemaining: ₱${(totalDue - totalPayments).toLocaleString()}.00`);
       return;
     }
 
@@ -313,6 +336,9 @@ export default function EventDetailPage() {
         status: 'completed',
         finalPayment: finalPayment,
         totalPaid: totalPayments,
+        amountPaid: totalPayments,
+        paymentStatus: 'paid',
+        paymentMethod: paymentMethod,
         completedAt: new Date(),
       });
 
@@ -441,7 +467,7 @@ export default function EventDetailPage() {
     window.print();
   };
 
-  const downloadInvoice = () => {
+  const downloadOwnerInvoice = () => {
     if (!booking) return;
 
     try {
@@ -623,7 +649,7 @@ export default function EventDetailPage() {
         doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
         doc.text(row.label, margin + 5, yPosition);
         
-        const valueText = row.value < 0 ? `-₱${Math.abs(row.value).toLocaleString()}.00` : `₱${row.value.toLocaleString()}.00`;
+        const valueText = row.value < 0 ? `-Php ${Math.abs(row.value).toLocaleString()}.00` : `Php ${row.value.toLocaleString()}.00`;
         doc.text(valueText, pageWidth - margin - 5, yPosition, { align: 'right' });
         yPosition += 7;
       });
@@ -637,7 +663,7 @@ export default function EventDetailPage() {
       doc.setTextColor(255, 255, 255);
       const finalAmount = booking.finalPrice || booking.totalPrice || 0;
       doc.text('TOTAL AMOUNT:', margin + 5, yPosition + 4);
-      doc.text(`₱${finalAmount.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 4, { align: 'right' });
+      doc.text(`Php ${finalAmount.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 4, { align: 'right' });
 
       yPosition += 18;
 
@@ -659,10 +685,10 @@ export default function EventDetailPage() {
       const remainingBalance = finalAmount - downPayment;
       
       doc.text(`Down Payment:`, margin + 8, yPosition + 13);
-      doc.text(`₱${downPayment.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 13, { align: 'right' });
+      doc.text(`Php ${downPayment.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 13, { align: 'right' });
       
       doc.text(`Remaining Balance:`, margin + 8, yPosition + 17);
-      doc.text(`₱${remainingBalance.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 17, { align: 'right' });
+      doc.text(`Php ${remainingBalance.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 17, { align: 'right' });
 
       yPosition += 25;
 
@@ -687,7 +713,7 @@ export default function EventDetailPage() {
           }
           
           doc.text(`${expense.category}: ${expense.description}`, margin + 5, yPosition);
-          doc.text(`₱${expense.amount.toLocaleString()}.00`, pageWidth - margin - 5, yPosition, { align: 'right' });
+          doc.text(`Php ${expense.amount.toLocaleString()}.00`, pageWidth - margin - 5, yPosition, { align: 'right' });
           yPosition += 6;
         });
         
@@ -697,7 +723,7 @@ export default function EventDetailPage() {
         doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
         doc.rect(margin, yPosition - 3, contentWidth, 7, 'F');
         doc.text('Total Expenses:', margin + 5, yPosition);
-        doc.text(`₱${totalExpenses.toLocaleString()}.00`, pageWidth - margin - 5, yPosition, { align: 'right' });
+        doc.text(`Php ${totalExpenses.toLocaleString()}.00`, pageWidth - margin - 5, yPosition, { align: 'right' });
         yPosition += 10;
       }
 
@@ -734,7 +760,273 @@ export default function EventDetailPage() {
       doc.text(`Generated on: ${format(new Date(), 'MMMM dd, yyyy hh:mm a')}`, pageWidth / 2, yPosition + 16, { align: 'center' });
 
       // Save PDF
-      const fileName = `EventCash_Invoice_${booking.customerName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`;
+      const fileName = `EventCash_Owner_Invoice_${booking.customerName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate invoice PDF');
+    }
+  };
+
+  const downloadCustomerInvoice = () => {
+    if (!booking) return;
+
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - 2 * margin;
+      let yPosition = margin;
+
+      // EventCash brand colors - Orange/Gold gradient
+      const primaryOrange = [255, 165, 0];
+      const primaryGold = [212, 175, 55];
+      const darkGray = [51, 51, 51];
+      const lightGray = [245, 245, 245];
+
+      // Header with gradient effect (orange to gold)
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(0, 0, pageWidth, 45, 'F');
+      
+      // Add a gold accent bar
+      doc.setFillColor(primaryGold[0], primaryGold[1], primaryGold[2]);
+      doc.rect(0, 40, pageWidth, 5, 'F');
+
+      // Company Logo/Name
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(32);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EventCash', margin, 25);
+      
+      // Subtitle
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Premium Catering Services', margin, 33);
+
+      // Invoice title on the right
+      doc.setFontSize(28);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INVOICE', pageWidth - margin, 25, { align: 'right' });
+
+      yPosition = 55;
+
+      // Invoice info section with orange accent
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      doc.rect(margin, yPosition, contentWidth, 25, 'F');
+      
+      // Orange left border accent
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, 3, 25, 'F');
+      
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Invoice Details', margin + 8, yPosition + 7);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(`Invoice #: ${booking.id.substring(0, 12).toUpperCase()}`, margin + 8, yPosition + 13);
+      doc.text(`Issue Date: ${format(new Date(), 'MMMM dd, yyyy')}`, margin + 8, yPosition + 18);
+      
+      doc.text(`Event Date: ${booking.eventDate?.toDate ? format(booking.eventDate.toDate(), 'MMMM dd, yyyy') : format(new Date(booking.eventDate), 'MMMM dd, yyyy')}`, pageWidth - margin - 60, yPosition + 13);
+      
+      // Status badge
+      const statusColor = booking.status === 'completed' ? [34, 197, 94] : booking.status === 'confirmed' ? [59, 130, 246] : [234, 179, 8];
+      doc.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
+      doc.roundedRect(pageWidth - margin - 35, yPosition + 16, 35, 6, 2, 2, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text(booking.status.toUpperCase(), pageWidth - margin - 17.5, yPosition + 20, { align: 'center' });
+
+      yPosition += 35;
+
+      // Two-column layout for Customer and Event info
+      const columnWidth = (contentWidth - 10) / 2;
+
+      // Customer Information
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, columnWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CUSTOMER INFORMATION', margin + 5, yPosition + 5.5);
+      
+      yPosition += 12;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Name:', margin + 5, yPosition);
+      doc.setFont('helvetica', 'normal');
+      doc.text(booking.customerName, margin + 20, yPosition);
+      yPosition += 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Email:', margin + 5, yPosition);
+      doc.setFont('helvetica', 'normal');
+      doc.text(booking.customerEmail, margin + 20, yPosition);
+      yPosition += 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Phone:', margin + 5, yPosition);
+      doc.setFont('helvetica', 'normal');
+      doc.text(booking.customerPhone, margin + 20, yPosition);
+
+      // Event Details (right column)
+      const eventYStart = yPosition - 22;
+      doc.setFillColor(primaryGold[0], primaryGold[1], primaryGold[2]);
+      doc.rect(margin + columnWidth + 10, eventYStart, columnWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EVENT DETAILS', margin + columnWidth + 15, eventYStart + 5.5);
+      
+      let eventY = eventYStart + 12;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Type:', margin + columnWidth + 15, eventY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(booking.eventType, margin + columnWidth + 30, eventY);
+      eventY += 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Package:', margin + columnWidth + 15, eventY);
+      doc.setFont('helvetica', 'normal');
+      const packageText = doc.splitTextToSize(booking.packageName, columnWidth - 20);
+      doc.text(packageText, margin + columnWidth + 30, eventY);
+      eventY += packageText.length * 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Guests:', margin + columnWidth + 15, eventY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(booking.guestCount || 'N/A'), margin + columnWidth + 30, eventY);
+      eventY += 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Location:', margin + columnWidth + 15, eventY);
+      doc.setFont('helvetica', 'normal');
+      const locationText = doc.splitTextToSize(booking.location.address, columnWidth - 20);
+      doc.text(locationText, margin + columnWidth + 30, eventY);
+
+      yPosition += 10;
+
+      // Pricing Section
+      yPosition += 15;
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, contentWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PRICING BREAKDOWN', margin + 5, yPosition + 5.5);
+      
+      yPosition += 12;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+
+      // Pricing rows with alternating background
+      const pricingRows = [
+        { label: 'Base Package Price', value: booking.totalPrice || 0 },
+        ...(booking.discount ? [{ label: 'Discount', value: -(booking.discount) }] : []),
+      ];
+
+      pricingRows.forEach((row, index) => {
+        if (index % 2 === 0) {
+          doc.setFillColor(250, 250, 250);
+          doc.rect(margin, yPosition - 3, contentWidth, 7, 'F');
+        }
+        
+        doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+        doc.text(row.label, margin + 5, yPosition);
+        
+        const valueText = row.value < 0 ? `-Php ${Math.abs(row.value).toLocaleString()}.00` : `Php ${row.value.toLocaleString()}.00`;
+        doc.text(valueText, pageWidth - margin - 5, yPosition, { align: 'right' });
+        yPosition += 7;
+      });
+
+      // Total section with orange background
+      yPosition += 3;
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition - 3, contentWidth, 12, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(255, 255, 255);
+      const finalAmount = booking.finalPrice || booking.totalPrice || 0;
+      doc.text('TOTAL AMOUNT:', margin + 5, yPosition + 4);
+      doc.text(`Php ${finalAmount.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 4, { align: 'right' });
+
+      yPosition += 18;
+
+      // Payment Information
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      doc.rect(margin, yPosition, contentWidth, 20, 'F');
+      
+      doc.setFillColor(primaryGold[0], primaryGold[1], primaryGold[2]);
+      doc.rect(margin, yPosition, 3, 20, 'F');
+      
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PAYMENT INFORMATION', margin + 8, yPosition + 7);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const downPayment = booking.downpayment || 0;
+      const remainingBalance = finalAmount - downPayment;
+      
+      doc.text(`Down Payment:`, margin + 8, yPosition + 13);
+      doc.text(`Php ${downPayment.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 13, { align: 'right' });
+      
+      doc.text(`Remaining Balance:`, margin + 8, yPosition + 17);
+      doc.text(`Php ${remainingBalance.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 17, { align: 'right' });
+
+      yPosition += 25;
+
+      // Footer note
+      yPosition += 5;
+      doc.setFillColor(255, 248, 220);
+      doc.rect(margin, yPosition, contentWidth, 20, 'F');
+      
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, 3, 20, 'F');
+      
+      doc.setTextColor(139, 69, 19);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      const noteText = doc.splitTextToSize(
+        'Thank you for choosing EventCash Catering Services! This invoice serves as a record of your booking. For any inquiries or modifications, please contact us at info@eventcash.com or call (123) 456-7890.',
+        contentWidth - 15
+      );
+      doc.text(noteText, margin + 8, yPosition + 5);
+
+      // Footer with brand colors
+      yPosition = pageHeight - 20;
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(0, yPosition, pageWidth, 20, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EventCash Catering Services', pageWidth / 2, yPosition + 7, { align: 'center' });
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text('info@eventcash.com | (123) 456-7890', pageWidth / 2, yPosition + 12, { align: 'center' });
+      doc.text(`Generated on: ${format(new Date(), 'MMMM dd, yyyy hh:mm a')}`, pageWidth / 2, yPosition + 16, { align: 'center' });
+
+      // Save PDF
+      const fileName = `EventCash_Customer_Invoice_${booking.customerName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`;
       doc.save(fileName);
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -768,43 +1060,175 @@ export default function EventDetailPage() {
       {/* Print Styles */}
       <style jsx global>{`
         @media print {
-          .no-print {
+          /* Hide everything by default */
+          body * {
+            visibility: hidden;
+          }
+          
+          /* Only show the print content */
+          .print-content,
+          .print-content * {
+            visibility: visible;
+          }
+          
+          .print-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            display: block !important;
+          }
+          
+          /* Hide navigation, buttons, and non-essential elements */
+          .no-print,
+          nav,
+          aside,
+          button,
+          .sidebar,
+          header,
+          footer {
             display: none !important;
           }
           
           @page {
             size: A4 portrait;
-            margin: 1.5cm;
+            margin: 2cm;
           }
           
           body {
             background: white !important;
+            margin: 0;
+            padding: 0;
           }
           
           * {
-            color: black !important;
             box-shadow: none !important;
+            text-shadow: none !important;
           }
           
-          main {
-            padding: 0 !important;
-            background: white !important;
-          }
-          
-          .print-card {
-            page-break-inside: avoid;
-            border: 1px solid #333 !important;
-            background: white !important;
-            padding: 15px !important;
-            margin-bottom: 15px !important;
-            border-radius: 0 !important;
-          }
-          
+          /* Print header */
           .print-header {
             text-align: center;
-            border-bottom: 3px solid #000;
-            padding-bottom: 15px;
+            border-bottom: 3px solid #F59E0B;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          
+          .print-header h1 {
+            font-size: 28px;
+            font-weight: bold;
+            color: #000 !important;
+            margin-bottom: 5px;
+          }
+          
+          .print-header p {
+            font-size: 12px;
+            color: #666 !important;
+          }
+          
+          /* Print sections */
+          .print-section {
+            page-break-inside: avoid;
             margin-bottom: 25px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+          }
+          
+          .print-section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #000 !important;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #F59E0B;
+          }
+          
+          .print-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+          }
+          
+          .print-row:last-child {
+            border-bottom: none;
+          }
+          
+          .print-label {
+            font-weight: 600;
+            color: #333 !important;
+            font-size: 13px;
+          }
+          
+          .print-value {
+            color: #000 !important;
+            font-size: 13px;
+          }
+          
+          /* Expense table */
+          .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+          }
+          
+          .print-table th {
+            background-color: #f3f4f6 !important;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 12px;
+            border: 1px solid #ddd;
+            color: #000 !important;
+          }
+          
+          .print-table td {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            font-size: 12px;
+            color: #000 !important;
+          }
+          
+          .print-table tr:nth-child(even) {
+            background-color: #f9fafb !important;
+          }
+          
+          /* Summary boxes */
+          .print-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+          }
+          
+          .print-summary-box {
+            border: 2px solid #F59E0B;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+          }
+          
+          .print-summary-label {
+            font-size: 11px;
+            color: #666 !important;
+            margin-bottom: 5px;
+          }
+          
+          .print-summary-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #000 !important;
+          }
+          
+          /* Footer */
+          .print-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #ddd;
+            text-align: center;
+            font-size: 11px;
+            color: #666 !important;
           }
         }
       `}</style>
@@ -869,7 +1293,7 @@ export default function EventDetailPage() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={downloadInvoice}
+                onClick={() => setShowInvoiceTypeModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
               >
                 <Download size={20} />
@@ -885,6 +1309,156 @@ export default function EventDetailPage() {
                 <Printer size={20} />
                 Print Report
               </motion.button>
+            </div>
+          </div>
+
+          {/* Print Content - Structured for printing */}
+          <div className="print-content hidden">
+            <div className="print-header">
+              <h1>Event Booking Report</h1>
+              <p>EventCash Catering Services</p>
+              <p>Generated on {format(new Date(), 'MMMM dd, yyyy hh:mm a')}</p>
+            </div>
+
+            {/* Customer & Event Information */}
+            <div className="print-section">
+              <div className="print-section-title">Customer & Event Information</div>
+              <div className="print-row">
+                <span className="print-label">Customer Name:</span>
+                <span className="print-value">{booking.customerName}</span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Email:</span>
+                <span className="print-value">{booking.customerEmail}</span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Phone:</span>
+                <span className="print-value">{booking.customerPhone}</span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Event Type:</span>
+                <span className="print-value">{booking.eventType}</span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Package:</span>
+                <span className="print-value">{booking.packageName}</span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Event Date:</span>
+                <span className="print-value">
+                  {booking.eventDate?.toDate ? format(booking.eventDate.toDate(), 'MMMM dd, yyyy') : format(new Date(booking.eventDate), 'MMMM dd, yyyy')} at {booking.eventTime}
+                </span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Guest Count:</span>
+                <span className="print-value">{booking.guestCount || 'N/A'}</span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Location:</span>
+                <span className="print-value">{booking.location.address}</span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Status:</span>
+                <span className="print-value">{booking.status.toUpperCase()}</span>
+              </div>
+            </div>
+
+            {/* Financial Summary */}
+            <div className="print-section">
+              <div className="print-section-title">Financial Summary</div>
+              <div className="print-row">
+                <span className="print-label">Total Price:</span>
+                <span className="print-value">₱{(booking.totalPrice || 0).toLocaleString()}.00</span>
+              </div>
+              {booking.discount > 0 && (
+                <div className="print-row">
+                  <span className="print-label">Discount:</span>
+                  <span className="print-value">-₱{booking.discount.toLocaleString()}.00</span>
+                </div>
+              )}
+              {booking.rescheduleFee && booking.rescheduleFee > 0 && (
+                <div className="print-row">
+                  <span className="print-label">Reschedule Fee:</span>
+                  <span className="print-value">₱{booking.rescheduleFee.toLocaleString()}.00</span>
+                </div>
+              )}
+              <div className="print-row">
+                <span className="print-label">Final Amount:</span>
+                <span className="print-value"><strong>₱{revenue.toLocaleString()}.00</strong></span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Down Payment:</span>
+                <span className="print-value">₱{(booking.downpayment || 0).toLocaleString()}.00</span>
+              </div>
+              <div className="print-row">
+                <span className="print-label">Remaining Balance:</span>
+                <span className="print-value">₱{Math.max(0, revenue - (booking.downpayment || 0)).toLocaleString()}.00</span>
+              </div>
+            </div>
+
+            {/* Expenses */}
+            {booking.expenses && booking.expenses.length > 0 && (
+              <div className="print-section">
+                <div className="print-section-title">Expenses Breakdown</div>
+                <table className="print-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>Description</th>
+                      <th style={{ textAlign: 'right' }}>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {booking.expenses.map((expense, index) => (
+                      <tr key={index}>
+                        <td>{expense.category}</td>
+                        <td>{expense.description}</td>
+                        <td style={{ textAlign: 'right' }}>₱{expense.amount.toLocaleString()}.00</td>
+                      </tr>
+                    ))}
+                    <tr style={{ fontWeight: 'bold', backgroundColor: '#f3f4f6' }}>
+                      <td colSpan={2}>Total Expenses</td>
+                      <td style={{ textAlign: 'right' }}>₱{totalExpenses.toLocaleString()}.00</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Assigned Staff */}
+            {booking.assignedStaff && booking.assignedStaff.length > 0 && (
+              <div className="print-section">
+                <div className="print-section-title">Assigned Staff</div>
+                {getAssignedStaffDetails().map((staff, index) => (
+                  <div key={index} className="print-row">
+                    <span className="print-label">{staff.displayName}</span>
+                    <span className="print-value">{staff.email}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Profit Summary */}
+            <div className="print-summary">
+              <div className="print-summary-box">
+                <div className="print-summary-label">Revenue</div>
+                <div className="print-summary-value" style={{ color: '#10b981' }}>₱{revenue.toLocaleString()}.00</div>
+              </div>
+              <div className="print-summary-box">
+                <div className="print-summary-label">Expenses</div>
+                <div className="print-summary-value" style={{ color: '#ef4444' }}>₱{totalExpenses.toLocaleString()}.00</div>
+              </div>
+              <div className="print-summary-box">
+                <div className="print-summary-label">Net Profit</div>
+                <div className="print-summary-value" style={{ color: profit >= 0 ? '#3b82f6' : '#ef4444' }}>
+                  ₱{profit.toLocaleString()}.00
+                </div>
+              </div>
+            </div>
+
+            <div className="print-footer">
+              <p>EventCash Catering Services | info@eventcash.com | (123) 456-7890</p>
+              <p>This is a confidential business report</p>
             </div>
           </div>
 
@@ -1339,6 +1913,21 @@ export default function EventDetailPage() {
                   Total: ₱{(booking.finalPrice || booking.totalPrice || 0).toLocaleString()}.00
                 </p>
               </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Method</label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'check' | 'bank_transfer')}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black font-semibold"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                  <option value="check">Check</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Select how the payment was received</p>
+              </div>
             </div>
             <div className="flex gap-3 mt-6">
               <motion.button
@@ -1531,6 +2120,73 @@ export default function EventDetailPage() {
                 Reschedule Event
               </motion.button>
             </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Invoice Type Selection Modal */}
+      {showInvoiceTypeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-bold text-gray-900">Download Invoice</h3>
+              <button onClick={() => setShowInvoiceTypeModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X size={24} />
+              </button>
+            </div>
+
+            <p className="text-gray-600 mb-6">Choose which type of invoice you want to download:</p>
+
+            <div className="space-y-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  downloadCustomerInvoice();
+                  setShowInvoiceTypeModal(false);
+                }}
+                className="w-full p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-left">
+                    <p className="text-lg font-bold">Customer Invoice</p>
+                    <p className="text-sm text-blue-100">Clean invoice without expenses or budget details</p>
+                  </div>
+                  <Download size={24} />
+                </div>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  downloadOwnerInvoice();
+                  setShowInvoiceTypeModal(false);
+                }}
+                className="w-full p-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-left">
+                    <p className="text-lg font-bold">Owner Invoice</p>
+                    <p className="text-sm text-green-100">Detailed invoice with expenses, budget, and profit</p>
+                  </div>
+                  <Download size={24} />
+                </div>
+              </motion.button>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowInvoiceTypeModal(false)}
+              className="w-full mt-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </motion.button>
           </motion.div>
         </div>
       )}

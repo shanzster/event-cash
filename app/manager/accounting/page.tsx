@@ -138,11 +138,11 @@ export default function ManagerAccounting() {
   );
 
   const monthlyRevenue = monthlyBookings
-    .filter(b => b.status === 'confirmed')
+    .filter(b => ['confirmed', 'completed'].includes(b.status))
     .reduce((sum, b) => sum + (b.totalPrice - b.discount), 0);
 
   const monthlyExpenses = monthlyBookings
-    .filter(b => b.status === 'confirmed')
+    .filter(b => ['confirmed', 'completed'].includes(b.status))
     .reduce((sum, b) => sum + getExpenseAmount(b.expenses), 0);
 
   const monthlyProfit = monthlyRevenue - monthlyExpenses;
@@ -152,15 +152,15 @@ export default function ManagerAccounting() {
     .reduce((sum, b) => sum + b.amountPaid, 0);
 
   const monthlyOutstanding = monthlyBookings
-    .filter(b => b.status === 'confirmed')
+    .filter(b => ['confirmed', 'completed'].includes(b.status))
     .reduce((sum, b) => {
       const outstanding = (b.totalPrice - b.discount) - b.amountPaid;
       return sum + Math.max(0, outstanding);
     }, 0);
 
-  // Payment breakdown
-  const paymentMethodBreakdown = bookings
-    .filter(b => b.paymentStatus === 'paid' && b.status === 'confirmed')
+  // Payment breakdown - MONTHLY
+  const paymentMethodBreakdown = monthlyBookings
+    .filter(b => ['paid', 'partial'].includes(b.paymentStatus) && ['confirmed', 'completed'].includes(b.status) && b.amountPaid > 0)
     .reduce((acc, b) => {
       const method = b.paymentMethod || 'cash';
       const existing = acc.find(item => item.method === method);
@@ -202,11 +202,11 @@ export default function ManagerAccounting() {
   }
 
   const allTimeRevenue = bookings
-    .filter(b => b.status === 'confirmed')
+    .filter(b => ['confirmed', 'completed'].includes(b.status))
     .reduce((sum, b) => sum + (b.totalPrice - b.discount), 0);
 
   const allTimeExpenses = bookings
-    .filter(b => b.status === 'confirmed')
+    .filter(b => ['confirmed', 'completed'].includes(b.status))
     .reduce((sum, b) => sum + getExpenseAmount(b.expenses), 0);
 
   const allTimeProfit = allTimeRevenue - allTimeExpenses;
@@ -216,7 +216,7 @@ export default function ManagerAccounting() {
     .reduce((sum, b) => sum + b.amountPaid, 0);
 
   const allTimeOutstanding = bookings
-    .filter(b => b.status === 'confirmed')
+    .filter(b => ['confirmed', 'completed'].includes(b.status))
     .reduce((sum, b) => {
       const outstanding = (b.totalPrice - b.discount) - b.amountPaid;
       return sum + Math.max(0, outstanding);
@@ -230,12 +230,12 @@ export default function ManagerAccounting() {
 
   // Get booking expenses for the month
   const monthlyBookingExpenses = monthlyBookings
-    .filter(b => b.status === 'confirmed')
+    .filter(b => ['confirmed', 'completed'].includes(b.status))
     .reduce((sum, b) => sum + getExpenseAmount(b.expenses), 0);
 
   // Get transaction income for the month (from transactions collection)
   const monthlyTransactionIncome = monthlyBookings
-    .filter(b => b.status === 'confirmed')
+    .filter(b => ['confirmed', 'completed'].includes(b.status))
     .reduce((sum, b) => sum + (b.totalPrice - b.discount), 0);
 
   const monthlyCashIncome = monthlyCashFlowEntries
@@ -250,9 +250,9 @@ export default function ManagerAccounting() {
   const generateCashFlowEntries = () => {
     const entries = [];
 
-    // Income entries from confirmed bookings
+    // Income entries from confirmed and completed bookings
     monthlyBookings
-      .filter(b => b.status === 'confirmed')
+      .filter(b => ['confirmed', 'completed'].includes(b.status))
       .forEach(booking => {
         const eventDate = booking.eventDate?.toDate?.() || new Date(booking.eventDate);
         entries.push({
@@ -268,9 +268,9 @@ export default function ManagerAccounting() {
         });
       });
 
-    // Expense entries from confirmed bookings
+    // Expense entries from confirmed and completed bookings
     monthlyBookings
-      .filter(b => b.status === 'confirmed' && getExpenseAmount(b.expenses) > 0)
+      .filter(b => ['confirmed', 'completed'].includes(b.status) && getExpenseAmount(b.expenses) > 0)
       .forEach(booking => {
         const eventDate = booking.eventDate?.toDate?.() || new Date(booking.eventDate);
         entries.push({
@@ -841,7 +841,7 @@ export default function ManagerAccounting() {
                   <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600 mb-3 font-semibold">Key Metrics:</p>
                     <div className="space-y-2 text-sm">
-                      <p><span className="font-semibold">Confirmed Bookings:</span> {monthlyBookings.filter(b => b.status === 'confirmed').length}</p>
+                      <p><span className="font-semibold">Confirmed Bookings:</span> {monthlyBookings.filter(b => ['confirmed', 'completed'].includes(b.status)).length}</p>
                       <p><span className="font-semibold">Fully Paid:</span> {monthlyBookings.filter(b => b.paymentStatus === 'paid').length}</p>
                       <p><span className="font-semibold">Partial Payment:</span> {monthlyBookings.filter(b => b.paymentStatus === 'partial').length}</p>
                       <p><span className="font-semibold">Pending Payment:</span> {monthlyBookings.filter(b => b.paymentStatus === 'pending').length}</p>
@@ -856,34 +856,111 @@ export default function ManagerAccounting() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="bg-white rounded-xl shadow-lg p-6"
+              className="space-y-6"
             >
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Method Breakdown</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-50 border-b-2 border-gray-200">
-                      <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Payment Method</th>
-                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Count</th>
-                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Amount</th>
-                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Percentage</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paymentMethodBreakdown.map((item, index) => (
-                      <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="px-6 py-4 font-semibold text-gray-900">
-                          {item.method.replace(/_/g, ' ').toUpperCase()}
-                        </td>
-                        <td className="px-6 py-4 text-right text-gray-700">{item.count}</td>
-                        <td className="px-6 py-4 text-right font-bold text-blue-600">₱{item.amount.toLocaleString()}.00</td>
-                        <td className="px-6 py-4 text-right font-semibold text-gray-700">
-                          {allTimePaid > 0 ? ((item.amount / allTimePaid) * 100).toFixed(1) : 0}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {/* Payment Method Breakdown */}
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Method Breakdown (This Month)</h3>
+                {paymentMethodBreakdown.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 border-b-2 border-gray-200">
+                          <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Payment Method</th>
+                          <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Count</th>
+                          <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Amount</th>
+                          <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Percentage</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paymentMethodBreakdown.map((item, index) => (
+                          <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+                            <td className="px-6 py-4 font-semibold text-gray-900">
+                              {item.method.replace(/_/g, ' ').toUpperCase()}
+                            </td>
+                            <td className="px-6 py-4 text-right text-gray-700">{item.count}</td>
+                            <td className="px-6 py-4 text-right font-bold text-blue-600">₱{item.amount.toLocaleString()}.00</td>
+                            <td className="px-6 py-4 text-right font-semibold text-gray-700">
+                              {monthlyPaidAmount > 0 ? ((item.amount / monthlyPaidAmount) * 100).toFixed(1) : 0}%
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <FileText size={48} className="mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-600 text-lg font-medium">No payments recorded this month</p>
+                    <p className="text-gray-500 text-sm mt-2">Payments will appear here once bookings are marked as paid or partially paid</p>
+                  </div>
+                )}
+              </div>
+
+              {/* All Monthly Bookings with Payment Status */}
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">All Bookings This Month</h3>
+                {monthlyBookings.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 border-b-2 border-gray-200">
+                          <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Customer</th>
+                          <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Event Type</th>
+                          <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Status</th>
+                          <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Payment Status</th>
+                          <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Total Price</th>
+                          <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Amount Paid</th>
+                          <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Outstanding</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {monthlyBookings.map((booking) => {
+                          const outstanding = (booking.totalPrice - (booking.discount || 0)) - (booking.amountPaid || 0);
+                          return (
+                            <tr key={booking.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <td className="px-6 py-4 font-semibold text-gray-900">{booking.customerName}</td>
+                              <td className="px-6 py-4 text-gray-700">{booking.eventType}</td>
+                              <td className="px-6 py-4">
+                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                  booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                                  booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  booking.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {booking.status.toUpperCase()}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                  booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                                  booking.paymentStatus === 'partial' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {(booking.paymentStatus || 'pending').toUpperCase()}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right font-bold text-gray-900">
+                                ₱{(booking.totalPrice - (booking.discount || 0)).toLocaleString()}.00
+                              </td>
+                              <td className="px-6 py-4 text-right font-bold text-green-600">
+                                ₱{(booking.amountPaid || 0).toLocaleString()}.00
+                              </td>
+                              <td className="px-6 py-4 text-right font-bold text-red-600">
+                                ₱{Math.max(0, outstanding).toLocaleString()}.00
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <FileText size={48} className="mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-600 text-lg font-medium">No bookings this month</p>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -899,15 +976,15 @@ export default function ManagerAccounting() {
                 <div className="p-4 bg-gradient-to-br from-red-50 to-orange-50 rounded-lg border-2 border-red-200">
                   <p className="text-sm text-gray-600 mb-1">Total Monthly Expenses</p>
                   <p className="text-3xl font-bold text-red-600">₱{monthlyExpenses.toLocaleString()}.00</p>
-                  <p className="text-xs text-gray-600 mt-2">{monthlyBookings.filter(b => b.expenses > 0).length} bookings with expenses</p>
+                  <p className="text-xs text-gray-600 mt-2">{monthlyBookings.filter(b => getExpenseAmount(b.expenses) > 0).length} bookings with expenses</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-gray-600 mb-1">Avg Expense per Booking</p>
                     <p className="text-2xl font-bold text-blue-600">
-                      ${monthlyBookings.filter(b => b.expenses > 0).length > 0 
-                        ? (monthlyExpenses / monthlyBookings.filter(b => b.expenses > 0).length).toFixed(0)
+                      ₱{monthlyBookings.filter(b => getExpenseAmount(b.expenses) > 0).length > 0 
+                        ? (monthlyExpenses / monthlyBookings.filter(b => getExpenseAmount(b.expenses) > 0).length).toFixed(0)
                         : 0
                       }
                     </p>
@@ -927,15 +1004,19 @@ export default function ManagerAccounting() {
                 <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-600 font-semibold mb-3">Bookings with Expenses</p>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {monthlyBookings.filter(b => b.expenses > 0).map(b => (
-                      <div key={b.id} className="flex justify-between items-center p-2 hover:bg-white rounded">
-                        <div>
-                          <p className="font-semibold text-gray-900">{b.customerName}</p>
-                          <p className="text-xs text-gray-600">{b.eventType}</p>
+                    {monthlyBookings.filter(b => getExpenseAmount(b.expenses) > 0).length > 0 ? (
+                      monthlyBookings.filter(b => getExpenseAmount(b.expenses) > 0).map(b => (
+                        <div key={b.id} className="flex justify-between items-center p-2 hover:bg-white rounded">
+                          <div>
+                            <p className="font-semibold text-gray-900">{b.customerName}</p>
+                            <p className="text-xs text-gray-600">{b.eventType}</p>
+                          </div>
+                          <p className="font-bold text-red-600">₱{getExpenseAmount(b.expenses).toLocaleString()}.00</p>
                         </div>
-                        <p className="font-bold text-red-600">₱{b.expenses.toLocaleString()}.00</p>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <p className="text-center text-gray-500 py-4">No bookings with expenses this month</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -966,16 +1047,17 @@ export default function ManagerAccounting() {
                     </tr>
                   </thead>
                   <tbody>
-                    {monthlyBookings.filter(b => b.status === 'confirmed').map(b => {
+                    {monthlyBookings.filter(b => ['confirmed', 'completed'].includes(b.status)).map(b => {
                       const netRevenue = b.totalPrice - b.discount;
-                      const profit = netRevenue - b.expenses;
+                      const expenseAmount = getExpenseAmount(b.expenses);
+                      const profit = netRevenue - expenseAmount;
                       return (
                         <tr key={b.id} className="border-b border-gray-200 hover:bg-gray-50">
                           <td className="px-6 py-4 text-sm font-semibold text-gray-900">{b.customerName}</td>
                           <td className="px-6 py-4 text-sm text-gray-700">{b.eventType}</td>
                           <td className="px-6 py-4 text-right text-sm font-semibold text-blue-600">₱{netRevenue.toLocaleString()}.00</td>
                           <td className="px-6 py-4 text-right text-sm font-semibold text-orange-600">₱{b.discount.toLocaleString()}.00</td>
-                          <td className="px-6 py-4 text-right text-sm font-semibold text-red-600">₱{b.expenses.toLocaleString()}.00</td>
+                          <td className="px-6 py-4 text-right text-sm font-semibold text-red-600">₱{expenseAmount.toLocaleString()}.00</td>
                           <td className="px-6 py-4 text-right text-sm font-bold text-green-600">₱{profit.toLocaleString()}.00</td>
                           <td className="px-6 py-4 text-center">
                             <span className={`px-2 py-1 text-xs font-bold rounded ${
@@ -995,7 +1077,7 @@ export default function ManagerAccounting() {
                       <td colSpan={2} className="px-6 py-4 font-bold text-gray-900">TOTALS</td>
                       <td className="px-6 py-4 text-right font-bold text-blue-600">₱{monthlyRevenue.toLocaleString()}.00</td>
                       <td className="px-6 py-4 text-right font-bold text-orange-600">
-                        ₱{monthlyBookings.filter(b => b.status === 'confirmed').reduce((sum, b) => sum + b.discount, 0).toLocaleString()}.00
+                        ₱{monthlyBookings.filter(b => ['confirmed', 'completed'].includes(b.status)).reduce((sum, b) => sum + b.discount, 0).toLocaleString()}.00
                       </td>
                       <td className="px-6 py-4 text-right font-bold text-red-600">₱{monthlyExpenses.toLocaleString()}.00</td>
                       <td className="px-6 py-4 text-right font-bold text-lg text-green-600">₱{monthlyProfit.toLocaleString()}.00</td>
@@ -1018,12 +1100,16 @@ export default function ManagerAccounting() {
                 <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-green-500">
                   <p className="text-gray-600 text-sm font-semibold mb-2">Total Income</p>
                   <p className="text-3xl font-bold text-green-600">₱{monthlyCashIncome.toLocaleString()}.00</p>
-                  <p className="text-xs text-gray-600 mt-2">{monthlyCashFlowEntries.filter(e => e.type === 'income').length} entries</p>
+                  <p className="text-xs text-gray-600 mt-2">
+                    {monthlyCashFlowEntries.filter(e => e.type === 'income').length + monthlyBookings.filter(b => ['confirmed', 'completed'].includes(b.status)).length} entries
+                  </p>
                 </div>
                 <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-red-500">
                   <p className="text-gray-600 text-sm font-semibold mb-2">Total Expenses</p>
                   <p className="text-3xl font-bold text-red-600">₱{monthlyCashExpense.toLocaleString()}.00</p>
-                  <p className="text-xs text-gray-600 mt-2">{monthlyCashFlowEntries.filter(e => e.type === 'expense').length} entries</p>
+                  <p className="text-xs text-gray-600 mt-2">
+                    {monthlyCashFlowEntries.filter(e => e.type === 'expense').length + monthlyBookings.filter(b => b.status === 'confirmed' && getExpenseAmount(b.expenses) > 0).length} entries
+                  </p>
                 </div>
                 <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-blue-500">
                   <p className="text-gray-600 text-sm font-semibold mb-2">Net Cash Flow</p>

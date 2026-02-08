@@ -31,6 +31,8 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, label: '', color: '' });
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const checkPasswordStrength = (password: string) => {
     let score = 0;
@@ -92,6 +94,10 @@ export default function Register() {
       newErrors.confirmPassword = 'Please confirm your password';
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!termsAccepted) {
+      newErrors.terms = 'You must accept the Terms and Conditions';
     }
 
     return newErrors;
@@ -446,19 +452,31 @@ export default function Register() {
                   </div>
 
                   {/* Terms Checkbox */}
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input type="checkbox" required className="w-4 h-4 rounded mt-1 accent-primary" />
-                    <span className="text-sm text-gray-900 font-medium">
-                      I agree to the{' '}
-                      <a href="#" className="text-primary hover:underline font-bold">
-                        Terms of Service
-                      </a>{' '}
-                      and{' '}
-                      <a href="#" className="text-primary hover:underline font-bold">
-                        Privacy Policy
-                      </a>
-                    </span>
-                  </label>
+                  <div>
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        required 
+                        className="w-4 h-4 rounded mt-1 accent-primary" 
+                      />
+                      <span className="text-sm text-gray-900 font-medium">
+                        I agree to the{' '}
+                        <button
+                          type="button"
+                          onClick={() => setShowTermsModal(true)}
+                          className="text-primary hover:underline font-bold"
+                        >
+                          Terms and Conditions
+                        </button>
+                        {' '}for Catering Service Bookings
+                      </span>
+                    </label>
+                    {errors.terms && (
+                      <p className="text-red-600 text-sm mt-1 font-medium">{errors.terms}</p>
+                    )}
+                  </div>
 
                   {/* Register Button */}
                   <button
@@ -481,6 +499,124 @@ export default function Register() {
             </div>
           </div>
         </motion.div>
+
+        {/* Terms and Conditions Modal */}
+        {showTermsModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowTermsModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-primary to-yellow-600 p-6 text-white">
+                <h2 className="text-2xl font-bold">Terms and Conditions for Catering Service Bookings</h2>
+                <p className="text-white/90 text-sm mt-1">Please read carefully before proceeding</p>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 overflow-y-auto max-h-[calc(85vh-200px)]">
+                <div className="space-y-6 text-gray-900">
+                  {/* Section 1 */}
+                  <div>
+                    <h3 className="text-lg font-bold text-primary mb-2">1. Booking Confirmation</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                      <li>All bookings are considered confirmed only upon receipt of the <strong className="text-gray-900">mandatory down payment</strong></li>
+                      <li>The down payment secures the date and services requested.</li>
+                    </ul>
+                  </div>
+
+                  {/* Section 2 */}
+                  <div>
+                    <h3 className="text-lg font-bold text-primary mb-2">2. Payment Policy</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                      <li>The down payment is <strong className="text-red-600">non-refundable</strong> under any circumstances.</li>
+                      <li>The remaining balance must be settled on or before the agreed date stated in the contract or invoice.</li>
+                    </ul>
+                  </div>
+
+                  {/* Section 3 */}
+                  <div>
+                    <h3 className="text-lg font-bold text-primary mb-2">3. Cancellation Policy</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                      <li><strong className="text-red-600">Cancelled bookings will not be refunded.</strong></li>
+                      <li>Clients are advised to carefully review their event details before finalizing the booking.</li>
+                    </ul>
+                  </div>
+
+                  {/* Section 4 */}
+                  <div>
+                    <h3 className="text-lg font-bold text-primary mb-2">4. Rescheduling Policy</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                      <li>Requests to reschedule an event must be made at least <strong className="text-gray-900">one (1) month prior</strong> to the original event date.</li>
+                      <li>Rescheduling is subject to the availability of the catering service on the new date.</li>
+                      <li>Failure to notify within the required period will result in <strong className="text-red-600">forfeiture of the down payment</strong>.</li>
+                    </ul>
+                  </div>
+
+                  {/* Section 5 */}
+                  <div>
+                    <h3 className="text-lg font-bold text-primary mb-2">5. Pricing and Adjustments</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                      <li>Prices quoted are based on the agreed menu and design at the time of booking.</li>
+                      <li><strong className="text-gray-900">Prices are subject to adjustments</strong> depending on changes in event design, menu customization, or special requests.</li>
+                      <li>Any additional costs will be communicated to the client prior to implementation.</li>
+                    </ul>
+                  </div>
+
+                  {/* Section 6 */}
+                  <div>
+                    <h3 className="text-lg font-bold text-primary mb-2">6. General Terms</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                      <li>The catering service reserves the right to decline bookings that conflict with existing schedules or exceed service capacity.</li>
+                      <li>Clients are responsible for providing accurate event details to ensure smooth service delivery.</li>
+                      <li>By confirming a booking, the client acknowledges and agrees to abide by these Terms and Conditions.</li>
+                    </ul>
+                  </div>
+
+                  {/* Important Notice */}
+                  <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 mt-6">
+                    <p className="text-sm text-gray-900 font-semibold">
+                      ⚠️ <strong>Important:</strong> By checking the box and creating an account, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="border-t border-gray-200 p-6 flex gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setShowTermsModal(false)}
+                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-900 rounded-xl font-bold hover:bg-gray-300 transition-colors"
+                >
+                  Close
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setTermsAccepted(true);
+                    setShowTermsModal(false);
+                  }}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all"
+                >
+                  I Accept
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </main>
       <Footer />
     </>

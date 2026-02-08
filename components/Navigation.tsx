@@ -31,6 +31,7 @@ export default function Navigation() {
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/booking/new', label: 'New Booking' },
     { href: '/my-bookings', label: 'My Bookings' },
+    { href: '/profile', label: 'My Profile' },
   ] : [
     // Public navigation
     { href: '/', label: 'Home' },
@@ -193,6 +194,14 @@ export default function Navigation() {
                     >
                       <Calendar size={18} />
                       My Bookings
+                    </Link>
+                    <Link
+                      href="/profile"
+                      className="block py-2.5 text-gray-900 hover:text-primary font-medium text-sm transition-colors text-center rounded-2xl hover:bg-primary/10 flex items-center justify-center gap-2"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <User size={18} />
+                      My Profile
                     </Link>
                     <button
                       onClick={() => {

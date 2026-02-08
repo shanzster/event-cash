@@ -75,6 +75,41 @@ export default function UpdateBookings() {
     }
   };
 
+  const updateBookingsWithPaymentMethod = async () => {
+    setLoading(true);
+    setMessage('Updating bookings with payment method...');
+    
+    try {
+      const bookingsRef = collection(db, 'bookings');
+      const snapshot = await getDocs(bookingsRef);
+      
+      let updated = 0;
+      let skipped = 0;
+      
+      for (const docSnapshot of snapshot.docs) {
+        const data = docSnapshot.data();
+        
+        // Only update if paymentMethod is missing and booking has payments
+        if (!data.paymentMethod && (data.paymentStatus === 'paid' || data.paymentStatus === 'partial' || data.status === 'completed')) {
+          await updateDoc(doc(db, 'bookings', docSnapshot.id), {
+            paymentMethod: 'cash' // Default to cash for existing bookings
+          });
+          updated++;
+        } else {
+          skipped++;
+        }
+      }
+      
+      setMessage(`✅ Updated ${updated} bookings with payment method, skipped ${skipped} (already had paymentMethod or no payments)`);
+      await fetchBookings();
+    } catch (error) {
+      console.error('Error updating bookings:', error);
+      setMessage('❌ Error updating bookings: ' + (error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const deleteAllBookings = async () => {
     if (!confirm('Are you sure you want to DELETE ALL bookings? This cannot be undone!')) {
       return;
@@ -172,6 +207,17 @@ export default function UpdateBookings() {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
+              onClick={updateBookingsWithPaymentMethod}
+              disabled={loading}
+              className="w-full px-6 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              <CheckCircle size={20} />
+              Add Payment Method to Paid Bookings
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={deleteAllBookings}
               disabled={loading}
               className="w-full px-6 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-3 disabled:opacity-50"
@@ -243,6 +289,7 @@ export default function UpdateBookings() {
               <li>Click "Fetch All Bookings" to see current bookings</li>
               <li>Red bookings are missing userId field</li>
               <li>Click "Add userId to Bookings" to fix them</li>
+              <li>Click "Add Payment Method to Paid Bookings" to set default payment method (cash) for completed bookings</li>
               <li>Or click "Delete All Bookings" to start fresh (testing only)</li>
             </ol>
           </div>

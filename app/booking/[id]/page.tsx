@@ -138,13 +138,13 @@ export default function BookingDetail() {
     doc.setFontSize(10);
     
     doc.text('Base Package Price:', 20, yPos);
-    doc.text(`₱${booking.basePrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
+    doc.text(`Php ${booking.basePrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
     yPos += 6;
     doc.text('Food Add-ons:', 20, yPos);
-    doc.text(`₱${booking.foodAddonsPrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
+    doc.text(`Php ${booking.foodAddonsPrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
     yPos += 6;
     doc.text('Service Add-ons:', 20, yPos);
-    doc.text(`₱${booking.servicesAddonsPrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
+    doc.text(`Php ${booking.servicesAddonsPrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
     
     yPos += 8;
     doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -156,7 +156,7 @@ export default function BookingDetail() {
     doc.setFontSize(12);
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.text('ESTIMATED TOTAL:', 20, yPos);
-    doc.text(`₱${booking.totalPrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
+    doc.text(`Php ${booking.totalPrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
 
     const eventDateFormatted = format(booking.eventDate, 'MMMM_dd_yyyy');
     const packageNameFormatted = booking.packageName.replace(/\s+/g, '');

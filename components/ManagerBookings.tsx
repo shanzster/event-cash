@@ -810,11 +810,11 @@ export default function ManagerBookings({ bookings, onUpdateStatus, managerId = 
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-black">Final Amount:</span>
                     <span className="font-bold text-xl text-black">
-                      ${(() => {
+                      ₱{(() => {
                         const adjusted = (selectedBooking as any).adjustedPrice || selectedBooking.totalPrice || 0;
                         const discount = (selectedBooking as any).discount || 0;
                         return (adjusted - discount).toLocaleString();
-                      })()}
+                      })()}.00
                     </span>
                   </div>
                 </div>
@@ -822,12 +822,12 @@ export default function ManagerBookings({ bookings, onUpdateStatus, managerId = 
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-600">Net Profit:</span>
                     <span className="font-semibold text-black">
-                      ${(() => {
+                      ₱{(() => {
                         const adjusted = (selectedBooking as any).adjustedPrice || selectedBooking.totalPrice || 0;
                         const discount = (selectedBooking as any).discount || 0;
                         const expenses = getExpenseAmount((selectedBooking as any).expenses);
                         return (adjusted - discount - expenses).toLocaleString();
-                      })()}
+                      })()}.00
                     </span>
                   </div>
                 )}

@@ -67,7 +67,7 @@ export default function ManagerSidebar({ children }: ManagerSidebarProps) {
 
   const handleLogout = async () => {
     await managerLogout();
-    router.push('/manager/login');
+    router.push('/');
   };
 
   const handleNavigation = (path: string) => {

@@ -30,6 +30,7 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: Calendar, label: 'New Booking', path: '/booking/new' },
     { icon: History, label: 'My Bookings', path: '/my-bookings' },
+    { icon: User, label: 'My Profile', path: '/profile' },
   ];
 
   const handleLogout = async () => {
@@ -157,7 +158,7 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
                         <button
                           onClick={() => {
                             setProfileOpen(false);
-                            router.push('/dashboard');
+                            router.push('/profile');
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-xl transition-all"
                         >
@@ -234,7 +235,7 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
                   <button
                     onClick={() => {
                       setProfileOpen(false);
-                      router.push('/dashboard');
+                      router.push('/profile');
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-xl transition-all"
                   >

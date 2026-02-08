@@ -53,7 +53,7 @@ export default function ManagerNavigation() {
 
   const handleLogout = async () => {
     await managerLogout();
-    router.push('/manager/login');
+    router.push('/');
   };
 
   return (

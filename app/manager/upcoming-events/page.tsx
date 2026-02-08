@@ -52,6 +52,9 @@ export default function UpcomingEventsPage() {
   const { managerUser, loading, isManager } = useManager();
   const [bookings, setBookings] = useState<BookingDetails[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<BookingDetails | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   useEffect(() => {
     if (!loading && (!managerUser || !isManager)) {
@@ -70,11 +73,11 @@ export default function UpcomingEventsPage() {
       const bookingsRef = collection(db, 'bookings');
       const q = query(
         bookingsRef,
-        where('status', '==', 'confirmed')
+        where('status', '==', 'confirmed'),
+        orderBy('eventDate', 'asc')
       );
       const snapshot = await getDocs(q);
       
-      const now = new Date();
       const bookingsData = snapshot.docs
         .map(doc => ({
           id: doc.id,
@@ -83,22 +86,7 @@ export default function UpcomingEventsPage() {
       
       console.log('All confirmed bookings:', bookingsData.length);
       
-      // Filter only upcoming events
-      const upcomingBookings = bookingsData.filter(booking => {
-        if (!booking.eventDate) return false;
-        const eventDate = booking.eventDate.toDate ? booking.eventDate.toDate() : new Date(booking.eventDate);
-        const isUpcoming = isAfter(eventDate, now);
-        console.log(`Booking ${booking.customerName}: ${eventDate.toLocaleDateString()} - Upcoming: ${isUpcoming}`);
-        return isUpcoming;
-      }).sort((a, b) => {
-        // Sort by event date ascending
-        const dateA = a.eventDate.toDate ? a.eventDate.toDate() : new Date(a.eventDate);
-        const dateB = b.eventDate.toDate ? b.eventDate.toDate() : new Date(b.eventDate);
-        return dateA.getTime() - dateB.getTime();
-      });
-      
-      console.log('Upcoming bookings:', upcomingBookings.length);
-      setBookings(upcomingBookings);
+      setBookings(bookingsData);
     } catch (error) {
       console.error('Error fetching upcoming events:', error);
     } finally {
@@ -115,6 +103,43 @@ export default function UpcomingEventsPage() {
     const revenue = booking.finalPrice || booking.totalPrice || 0;
     const totalExpenses = calculateTotalExpenses(booking.expenses);
     return revenue - totalExpenses;
+  };
+
+  const handleCancelBooking = async () => {
+    if (!bookingToCancel) return;
+
+    if (!cancelReason.trim()) {
+      alert('Please provide a reason for cancellation');
+      return;
+    }
+
+    try {
+      const bookingRef = doc(db, 'bookings', bookingToCancel.id);
+      await updateDoc(bookingRef, {
+        status: 'cancelled',
+        cancelledAt: new Date(),
+        cancelReason: cancelReason.trim(),
+        cancelledBy: managerUser?.uid,
+      });
+
+      // Remove from list
+      setBookings(bookings.filter(b => b.id !== bookingToCancel.id));
+      
+      setShowCancelModal(false);
+      setBookingToCancel(null);
+      setCancelReason('');
+      
+      alert('Booking cancelled successfully');
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      alert('Failed to cancel booking. Please try again.');
+    }
+  };
+
+  const openCancelModal = (booking: BookingDetails, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    setBookingToCancel(booking);
+    setShowCancelModal(true);
   };
 
   if (loading || loadingData) {
@@ -191,13 +216,26 @@ export default function UpcomingEventsPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     whileHover={{ scale: 1.02 }}
-                    onClick={() => router.push(`/manager/upcoming-events/${booking.id}`)}
-                    className="bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer hover:shadow-2xl transition-all"
+                    className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all"
                   >
                     <div className="p-6">
                       {/* Event Header */}
                       <div className="mb-4">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">{booking.customerName}</h3>
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 
+                            onClick={() => router.push(`/manager/upcoming-events/${booking.id}`)}
+                            className="text-xl font-bold text-gray-900 cursor-pointer hover:text-primary"
+                          >
+                            {booking.customerName}
+                          </h3>
+                          <button
+                            onClick={(e) => openCancelModal(booking, e)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Cancel Booking"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
                         <p className="text-gray-600 text-sm mb-3">{booking.packageName}</p>
                         
                         <div className="space-y-2 text-sm">
@@ -244,7 +282,10 @@ export default function UpcomingEventsPage() {
                       </div>
 
                       {/* Click to view */}
-                      <div className="mt-4 text-center">
+                      <div 
+                        onClick={() => router.push(`/manager/upcoming-events/${booking.id}`)}
+                        className="mt-4 text-center cursor-pointer hover:bg-gray-50 rounded-lg py-2 transition-colors"
+                      >
                         <p className="text-sm text-primary font-semibold">Click to view details →</p>
                       </div>
                     </div>
@@ -255,6 +296,80 @@ export default function UpcomingEventsPage() {
           </div>
         </div>
       </div>
+
+      {/* Cancel Booking Modal */}
+      {showCancelModal && bookingToCancel && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-bold text-gray-900">Cancel Booking</h3>
+              <button 
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setBookingToCancel(null);
+                  setCancelReason('');
+                }} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+              <p className="text-sm text-red-800 mb-2">
+                <strong>Warning:</strong> You are about to cancel this booking:
+              </p>
+              <p className="text-sm font-semibold text-gray-900">{bookingToCancel.customerName}</p>
+              <p className="text-xs text-gray-600">{bookingToCancel.packageName}</p>
+              <p className="text-xs text-gray-600">
+                {bookingToCancel.eventDate?.toDate && format(bookingToCancel.eventDate.toDate(), 'MMMM dd, yyyy')} at {bookingToCancel.eventTime}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Reason for Cancellation <span className="text-red-600">*</span>
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-red-500 text-black"
+                  placeholder="e.g., Customer request, venue unavailable, emergency..."
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setBookingToCancel(null);
+                  setCancelReason('');
+                }}
+                className="flex-1 py-2 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Keep Booking
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleCancelBooking}
+                className="flex-1 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg font-semibold hover:from-red-700 hover:to-red-800 transition-colors"
+              >
+                Cancel Booking
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </ManagerSidebar>
   );
 }
