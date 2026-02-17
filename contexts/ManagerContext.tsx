@@ -50,8 +50,7 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setManagerUser(user);
             setManagerData(data);
           } else {
-            // Not a manager, sign out
-            await signOut(auth);
+            // Not a manager, just clear manager state (don't sign out the user)
             setManagerUser(null);
             setManagerData(null);
           }

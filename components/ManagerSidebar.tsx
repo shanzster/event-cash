@@ -64,6 +64,7 @@ export default function ManagerSidebar({ children }: ManagerSidebarProps) {
     { icon: BarChart3, label: 'Reports', path: '/owner/reports' },
     { icon: TrendingUp, label: 'Transactions', path: '/owner/transactions' },
     { icon: BookOpen, label: 'Accounting', path: '/owner/accounting' },
+    { icon: Settings, label: 'Website CMS', path: '/owner/cms' },
   ];
 
   const handleLogout = async () => {
