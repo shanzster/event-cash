@@ -34,7 +34,7 @@ export default function ManagerCalendarPage() {
 
   useEffect(() => {
     if (!loading && (!managerUser || !isManager)) {
-      router.push('/manager/login');
+      router.push('/owner/login');
     }
   }, [managerUser, loading, isManager, router]);
 

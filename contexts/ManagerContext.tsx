@@ -107,9 +107,28 @@ export const ManagerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const managerLogout = async () => {
-    await signOut(auth);
-    setManagerUser(null);
-    setManagerData(null);
+    try {
+      console.log('=== MANAGER LOGOUT ATTEMPT ===');
+      
+      // Clear manager state immediately
+      setManagerUser(null);
+      setManagerData(null);
+      
+      // Clear any localStorage that might persist auth state
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('user');
+        localStorage.removeItem('managerUser');
+        localStorage.clear(); // Clear all localStorage to ensure no auth persistence
+      }
+      
+      // Sign out from Firebase
+      await signOut(auth);
+      console.log('Manager logout successful');
+    } catch (error: any) {
+      console.error('=== MANAGER LOGOUT ERROR ===');
+      console.error('Error:', error.message);
+      throw error;
+    }
   };
 
   const value = {

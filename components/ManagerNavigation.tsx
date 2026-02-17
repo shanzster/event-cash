@@ -15,45 +15,50 @@ export default function ManagerNavigation() {
 
   const navItems = [
     {
-      href: '/manager/dashboard',
+      href: '/owner/dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
     },
     {
-      href: '/manager/bookings',
+      href: '/owner/bookings',
       label: 'Bookings',
       icon: Package,
     },
     {
-      href: '/manager/upcoming-events',
+      href: '/owner/upcoming-events',
       label: 'Upcoming Events',
       icon: CalendarIcon,
     },
     {
-      href: '/manager/users',
+      href: '/owner/users',
       label: 'Users',
       icon: Users,
     },
     {
-      href: '/manager/calendar',
+      href: '/owner/calendar',
       label: 'Calendar',
       icon: CalendarIcon,
     },
     {
-      href: '/manager/reports',
+      href: '/owner/reports',
       label: 'Reports',
       icon: BarChart3,
     },
     {
-      href: '/manager/accounting',
+      href: '/owner/accounting',
       label: 'Accounting',
       icon: TrendingUp,
     },
   ];
 
   const handleLogout = async () => {
-    await managerLogout();
-    router.push('/');
+    try {
+      await managerLogout();
+      // Redirect to owner login page instead of homepage
+      router.push('/owner/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (
@@ -62,7 +67,7 @@ export default function ManagerNavigation() {
         <div className="flex items-center justify-between h-16">
           {/* Logo / Title */}
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-gray-900">Manager Portal</h1>
+              <h1 className="text-xl font-bold text-gray-900">Owner Portal</h1>
           </div>
 
           {/* Navigation Links */}
@@ -95,8 +100,8 @@ export default function ManagerNavigation() {
           {/* User Info & Logout */}
           <div className="flex items-center gap-4">
             <div className="hidden sm:block text-right">
-              <p className="text-sm font-semibold text-gray-900">{managerData?.displayName || 'Manager'}</p>
-              <p className="text-xs text-gray-600">Manager Account</p>
+              <p className="text-sm font-semibold text-gray-900">{managerData?.displayName || 'Owner'}</p>
+              <p className="text-xs text-gray-600">Owner Account</p>
             </div>
             <motion.button
               onClick={handleLogout}

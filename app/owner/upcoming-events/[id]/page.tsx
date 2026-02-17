@@ -114,7 +114,7 @@ export default function EventDetailPage() {
 
   useEffect(() => {
     if (!loading && (!managerUser || !isManager)) {
-      router.push('/manager/login');
+      router.push('/owner/login');
     }
 
     fetchStaff();
@@ -140,7 +140,7 @@ export default function EventDetailPage() {
         setEventBudget(bookingData.budget || 0);
       } else {
         alert('Event not found');
-        router.push('/manager/upcoming-events');
+        router.push('/owner/upcoming-events');
       }
     } catch (error) {
       console.error('Error fetching event details:', error);
@@ -374,7 +374,7 @@ export default function EventDetailPage() {
       setShowCompleteModal(false);
       setFinalPaymentAmount('');
       alert('Event marked as complete and transaction recorded!');
-      router.push('/manager/upcoming-events');
+      router.push('/owner/upcoming-events');
     } catch (error) {
       console.error('Error completing event:', error);
       alert('Failed to complete event');
@@ -727,6 +727,39 @@ export default function EventDetailPage() {
         yPosition += 10;
       }
 
+      // Terms and Conditions Section
+      yPosition += 5;
+      
+      // Check if we need a new page
+      if (yPosition > pageHeight - 80) {
+        doc.addPage();
+        yPosition = margin;
+      }
+      
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, contentWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TERMS AND CONDITIONS', margin + 5, yPosition + 5.5);
+      
+      yPosition += 12;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      
+      const terms = [
+        '1. Downpayment of 30% is required to secure the booking.',
+        '2. Final payment must be settled before or after the event.',
+        '3. No refunds for cancellations less than 7 days before the event.'
+      ];
+      
+      terms.forEach((term, index) => {
+        const termLines = doc.splitTextToSize(term, contentWidth - 10);
+        doc.text(termLines, margin + 5, yPosition);
+        yPosition += termLines.length * 5;
+      });
+
       // Footer note
       yPosition += 5;
       doc.setFillColor(255, 248, 220);
@@ -993,6 +1026,39 @@ export default function EventDetailPage() {
 
       yPosition += 25;
 
+      // Terms and Conditions Section
+      yPosition += 5;
+      
+      // Check if we need a new page
+      if (yPosition > pageHeight - 80) {
+        doc.addPage();
+        yPosition = margin;
+      }
+      
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, contentWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TERMS AND CONDITIONS', margin + 5, yPosition + 5.5);
+      
+      yPosition += 12;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      
+      const termsCustomer = [
+        '1. Downpayment of 30% is required to secure the booking.',
+        '2. Final payment must be settled before or after the event.',
+        '3. No refunds for cancellations less than 7 days before the event.'
+      ];
+      
+      termsCustomer.forEach((term, index) => {
+        const termLines = doc.splitTextToSize(term, contentWidth - 10);
+        doc.text(termLines, margin + 5, yPosition);
+        yPosition += termLines.length * 5;
+      });
+
       // Footer note
       yPosition += 5;
       doc.setFillColor(255, 248, 220);
@@ -1243,7 +1309,7 @@ export default function EventDetailPage() {
 
           {/* Back Button & Action Buttons */}
           <div className="flex items-center justify-between mb-6 no-print">
-            <Link href="/manager/upcoming-events">
+            <Link href="/owner/upcoming-events">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

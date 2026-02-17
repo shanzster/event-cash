@@ -46,7 +46,7 @@ export default function ManagerDashboard() {
 
   useEffect(() => {
     if (!loading && (!managerUser || !isManager)) {
-      router.push('/manager/login');
+      router.push('/owner/login');
     }
   }, [managerUser, loading, isManager, router]);
 
@@ -242,7 +242,7 @@ export default function ManagerDashboard() {
               )}
 
               {upcomingThisWeek.length > 5 && (
-                <Link href="/manager/bookings">
+                <Link href="/owner/bookings">
                   <button className="w-full mt-4 py-2 text-primary hover:text-yellow-600 font-semibold text-sm transition-colors">
                     View all {upcomingThisWeek.length} events →
                   </button>
@@ -283,7 +283,7 @@ export default function ManagerDashboard() {
                 </div>
               </div>
 
-              <Link href="/manager/calendar">
+              <Link href="/owner/calendar">
                 <button className="w-full mt-4 py-3 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all">
                   View Full Calendar →
                 </button>
@@ -329,7 +329,7 @@ export default function ManagerDashboard() {
                             {booking.eventDate?.toDate && format(booking.eventDate.toDate(), 'MMM dd, yyyy')}
                           </p>
                         </div>
-                        <Link href="/manager/bookings">
+                        <Link href="/owner/bookings">
                           <button className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
                             Review
                           </button>
@@ -340,7 +340,7 @@ export default function ManagerDashboard() {
               )}
 
               {pendingCount > 5 && (
-                <Link href="/manager/bookings">
+                <Link href="/owner/bookings">
                   <button className="w-full mt-4 py-2 text-yellow-600 hover:text-yellow-700 font-semibold text-sm transition-colors">
                     View all {pendingCount} pending →
                   </button>
@@ -358,28 +358,28 @@ export default function ManagerDashboard() {
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
               
               <div className="flex flex-col gap-3">
-                <Link href="/manager/bookings">
+                <Link href="/owner/bookings">
                   <button className="w-full p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-between">
                     <span>Manage Bookings</span>
                     <Package size={20} />
                   </button>
                 </Link>
 
-                <Link href="/manager/calendar">
+                <Link href="/owner/calendar">
                   <button className="w-full p-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-between">
                     <span>View Calendar</span>
                     <Calendar size={20} />
                   </button>
                 </Link>
 
-                <Link href="/manager/reports">
+                <Link href="/owner/reports">
                   <button className="w-full p-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-between">
                     <span>View Reports</span>
                     <TrendingUp size={20} />
                   </button>
                 </Link>
 
-                <Link href="/manager/users">
+                <Link href="/owner/users">
                   <button className="w-full p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-between">
                     <span>Manage Users</span>
                     <Users size={20} />

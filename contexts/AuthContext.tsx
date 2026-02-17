@@ -44,17 +44,8 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  // Initialize user from localStorage to survive Fast Refresh
-  const [user, setUser] = useState<User | null>(() => {
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        console.log('🔄 Restoring user from localStorage');
-        return JSON.parse(storedUser);
-      }
-    }
-    return null;
-  });
+  // Don't restore from localStorage on mount - let onAuthStateChanged handle it
+  const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -63,15 +54,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('🔥 AUTH PROVIDER: Setting up auth listener');
     }
     let isSubscribed = true;
-    
-    // Check if we already have a user from localStorage - if so, we've already set initial state
-    let hasSetInitialState = false;
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        hasSetInitialState = true;
-      }
-    }
     
     // Set up the listener immediately
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -91,7 +73,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
         
         setUser(firebaseUser);
-        hasSetInitialState = true;
         
         try {
           // Only fetch user data if not already set (optimization for signup flow)
@@ -116,20 +97,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setLoading(false);
         }
       } else {
-        // Check if we have a user in localStorage before clearing
-        const hasStoredUser = typeof window !== 'undefined' && localStorage.getItem('user');
-        
-        if (hasStoredUser) {
-          // Don't clear the user state - this is likely a Fast Refresh issue
-        } else if (hasSetInitialState) {
-          // Clear localStorage
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('user');
-          }
-          
-          setUser(null);
-          setUserData(null);
+        // User is logged out - clear everything
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('user');
         }
+        
+        setUser(null);
+        setUserData(null);
         
         if (isSubscribed) {
           setLoading(false);
@@ -234,8 +208,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('=== LOGOUT ATTEMPT ===');
       
-      // Clear localStorage first
-      localStorage.removeItem('user');
+      // Clear ALL localStorage to prevent any auto-login
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('user');
+        localStorage.removeItem('managerUser');
+        localStorage.clear();
+      }
       
       // Clear state immediately
       setUser(null);

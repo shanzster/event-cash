@@ -6,9 +6,10 @@ import { collection, getDocs, addDoc, serverTimestamp, query, where } from 'fire
 import { db } from '@/lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft, Search, User, X, Sparkles } from 'lucide-react';
-import { packages, eventTypes, serviceTypes, additionalFoodItems, additionalServices } from '@/lib/packages';
+import { packages as staticPackages, eventTypes, serviceTypes, additionalFoodItems, additionalServices } from '@/lib/packages';
 import { Package } from '@/types/booking';
 import { formatCurrency } from '@/lib/currency';
+import { isDateClosed } from '@/lib/closedDays';
 
 const MapSelector = dynamic(() => import('./MapSelector'), { ssr: false });
 
@@ -34,6 +35,30 @@ export default function BookForClientModal({ isOpen, onClose, managerId, onBooki
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [packages, setPackages] = useState<Package[]>([]);
+
+  // Fetch packages from Firestore
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const packagesRef = collection(db, 'packages');
+        const snapshot = await getDocs(packagesRef);
+        
+        const packagesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Package[];
+        
+        setPackages(packagesData.sort((a, b) => a.price - b.price));
+      } catch (error) {
+        console.error('Error fetching packages:', error);
+      }
+    };
+
+    if (isOpen) {
+      fetchPackages();
+    }
+  }, [isOpen]);
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -202,6 +227,14 @@ export default function BookForClientModal({ isOpen, onClose, managerId, onBooki
     setIsSubmitting(true);
     
     try {
+      // Check if the selected date is closed
+      const isClosed = await isDateClosed(formData.eventDate);
+      if (isClosed) {
+        alert('Sorry, the selected date is not available for bookings. Please choose another date.');
+        setIsSubmitting(false);
+        return;
+      }
+
       const pricing = calculatePricing();
       const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceType);
       
@@ -452,25 +485,50 @@ export default function BookForClientModal({ isOpen, onClose, managerId, onBooki
                 <h2 className="text-xl font-bold mb-2 text-gray-900">Choose Package</h2>
                 <p className="text-sm text-gray-600 mb-4">For: <span className="font-semibold">{selectedClient.displayName}</span></p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {packages.map((pkg) => (
-                    <motion.div
-                      key={pkg.id}
-                      whileHover={{ y: -5 }}
+                {packages.length === 0 ? (
+                  <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-8 text-center">
+                    <Sparkles size={48} className="text-yellow-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">No Packages Available</h3>
+                    <p className="text-gray-600 mb-4">
+                      You need to create packages first before booking for clients.
+                    </p>
+                    <button
                       onClick={() => {
-                        setSelectedPackage(pkg);
-                        setStep(3);
+                        onClose();
+                        window.location.href = '/owner/packages';
                       }}
-                      className="cursor-pointer border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md hover:border-primary transition-all"
+                      className="px-6 py-2 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
                     >
-                      <img src={pkg.image} alt={pkg.name} className="w-full h-24 object-cover" />
-                      <div className="p-3">
-                        <h3 className="font-bold text-gray-900 text-sm mb-1">{pkg.name}</h3>
-                        <p className="text-lg font-bold text-primary">{formatCurrency(pkg.price)}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                      Go to Package Management
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {packages.map((pkg) => (
+                      <motion.div
+                        key={pkg.id}
+                        whileHover={{ y: -5 }}
+                        onClick={() => {
+                          setSelectedPackage(pkg);
+                          setStep(3);
+                        }}
+                        className="cursor-pointer border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md hover:border-primary transition-all"
+                      >
+                        {pkg.imageUrl || pkg.image ? (
+                          <img src={pkg.imageUrl || pkg.image} alt={pkg.name} className="w-full h-24 object-cover" />
+                        ) : (
+                          <div className={`w-full h-24 bg-gradient-to-br ${pkg.gradient || 'from-primary to-yellow-600'} flex items-center justify-center`}>
+                            <Sparkles size={32} className="text-white" />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <h3 className="font-bold text-gray-900 text-sm mb-1">{pkg.name}</h3>
+                          <p className="text-lg font-bold text-primary">{formatCurrency(pkg.price)}</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -478,7 +536,10 @@ export default function BookForClientModal({ isOpen, onClose, managerId, onBooki
             {selectedClient && selectedPackage && step === 3 && (
               <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }}>
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => {
+                    setSelectedPackage(null);
+                    setStep(2);
+                  }}
                   className="mb-4 flex items-center gap-2 text-primary hover:underline"
                 >
                   <ChevronLeft size={18} /> Back

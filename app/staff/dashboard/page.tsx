@@ -18,8 +18,8 @@ import {
 } from 'lucide-react';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useManager } from '@/contexts/ManagerContext';
 import { format } from 'date-fns';
+import StaffSidebar from '@/components/StaffSidebar';
 
 interface EventAssignment {
   bookingId: string;
@@ -40,7 +40,6 @@ interface EventAssignment {
 
 export default function StaffDashboard() {
   const router = useRouter();
-  const { managerUser } = useManager();
   const [assignments, setAssignments] = useState<EventAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,42 +122,20 @@ export default function StaffDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600 font-semibold">Loading your assignments...</p>
+      <StaffSidebar>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600 font-semibold">Loading your assignments...</p>
+          </div>
         </div>
-      </div>
+      </StaffSidebar>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white shadow-lg sticky top-0 z-40"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-yellow-600 bg-clip-text text-transparent">
-              Staff Portal
-            </h1>
-            <p className="text-gray-600 text-sm">Your assigned events</p>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
-          >
-            Logout
-          </motion.button>
-        </div>
-      </motion.div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <StaffSidebar>
+      <div>
         {/* Search and Filter */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -291,6 +268,6 @@ export default function StaffDashboard() {
           </div>
         )}
       </div>
-    </div>
+    </StaffSidebar>
   );
 }

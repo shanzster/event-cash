@@ -8,9 +8,46 @@ export interface Package {
   id: string;
   name: string;
   price: number;
+  pricePerPax?: number; // Price per person
   description: string;
   features: string[];
-  image: string;
+  
+  // Pax Configuration
+  minPax?: number; // Minimum number of guests
+  maxPax?: number; // Maximum number of guests
+  
+  // Catering Details
+  menuItems?: string[]; // List of menu items included
+  appetizers?: string[]; // Appetizer options
+  mainCourses?: string[]; // Main course options
+  desserts?: string[]; // Dessert options
+  beverages?: string[]; // Beverage options
+  
+  // Service Details
+  serviceHours?: number; // Number of service hours
+  setupTime?: number; // Setup time in hours
+  staffCount?: number; // Number of staff included
+  
+  // Equipment & Amenities
+  tablesIncluded?: boolean;
+  chairsIncluded?: boolean;
+  linensIncluded?: boolean;
+  utensilsIncluded?: boolean;
+  decorIncluded?: boolean;
+  
+  // Additional Info
+  category?: string; // e.g., "Budget", "Standard", "Premium", "Luxury"
+  isActive?: boolean; // Whether package is available for booking
+  
+  // Display
+  image?: string; // Legacy field for backward compatibility
+  imageUrl?: string; // New Cloudinary image URL
+  icon?: string; // Icon name for display
+  gradient?: string; // Gradient classes for styling
+  
+  // Metadata
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 export interface EventType {

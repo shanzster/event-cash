@@ -50,7 +50,7 @@ export default function StaffPage() {
 
   useEffect(() => {
     if (!isManager || !managerUser) {
-      router.push('/manager/login');
+      router.push('/owner/login');
       return;
     }
 

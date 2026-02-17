@@ -11,11 +11,13 @@ import {
   Check, Sparkles, Info, Phone, Mail, User as UserIcon,
   UtensilsCrossed, Armchair, Table2, Plus, Minus, ShoppingCart
 } from 'lucide-react';
-import { packages, eventTypes, serviceTypes, additionalFoodItems, additionalServices } from '@/lib/packages';
+import { packages as staticPackages, eventTypes, serviceTypes, additionalFoodItems, additionalServices } from '@/lib/packages';
 import { Package } from '@/types/booking';
 import dynamic from 'next/dynamic';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { isDateClosed } from '@/lib/closedDays';
+import { format } from 'date-fns';
 
 const MapSelector = dynamic(() => import('@/components/MapSelector'), { ssr: false });
 
@@ -27,6 +29,31 @@ export default function NewBooking() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hoveredPackage, setHoveredPackage] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(true);
+
+  // Fetch packages from Firestore
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const packagesRef = collection(db, 'packages');
+        const snapshot = await getDocs(packagesRef);
+        
+        const packagesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Package[];
+        
+        setPackages(packagesData.sort((a, b) => a.price - b.price));
+      } catch (error) {
+        console.error('Error fetching packages:', error);
+      } finally {
+        setLoadingPackages(false);
+      }
+    };
+
+    fetchPackages();
+  }, []);
 
   // Convert 24-hour time to 12-hour format
   const formatTimeTo12Hour = (time: string) => {
@@ -159,6 +186,14 @@ export default function NewBooking() {
     setShowConfirmModal(false);
     
     try {
+      // Check if the selected date is closed
+      const isClosed = await isDateClosed(formData.eventDate);
+      if (isClosed) {
+        alert('Sorry, the selected date is not available for bookings. Please choose another date.');
+        setIsSubmitting(false);
+        return;
+      }
+
       const pricing = calculatePricing();
       const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceType);
       
@@ -282,56 +317,104 @@ export default function NewBooking() {
                   <p className="text-gray-600 text-center mb-8">Select the package that best fits your event needs</p>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                  {packages.map((pkg, index) => (
-                    <motion.div key={pkg.id} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}
-                      whileHover={{ y: -15, scale: 1.03 }} onHoverStart={() => setHoveredPackage(pkg.id)} onHoverEnd={() => setHoveredPackage(null)}
-                      onClick={() => setSelectedPackage(pkg)}
-                      className={`cursor-pointer backdrop-blur-xl bg-white/95 border-2 rounded-3xl overflow-hidden shadow-xl transition-all relative ${
-                        selectedPackage?.id === pkg.id ? 'border-primary ring-4 ring-primary/30 shadow-2xl' : 'border-primary/20 hover:border-primary/60'
-                      }`}>
-                      {selectedPackage?.id === pkg.id && (
-                        <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }}
-                          className="absolute top-4 right-4 z-10 w-12 h-12 bg-gradient-to-br from-primary to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
-                          <Check size={24} className="text-white" />
-                        </motion.div>
-                      )}
-                      <div className="relative h-56 overflow-hidden">
-                        <motion.img src={pkg.image} alt={pkg.name} className="w-full h-full object-cover"
-                          animate={{ scale: hoveredPackage === pkg.id ? 1.1 : 1 }} transition={{ duration: 0.3 }} />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                        <div className="absolute bottom-4 left-4 right-4">
-                          <h3 className="text-2xl font-bold text-white drop-shadow-lg">{pkg.name}</h3>
-                        </div>
-                      </div>
-                      <div className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2">
-                            <Sparkles size={28} className="text-primary" />
-                            <span className="text-4xl font-bold text-primary">₱{pkg.price.toLocaleString()}.00</span>
-                          </div>
-                          <span className="text-sm text-gray-600 font-medium">base price</span>
-                        </div>
-                        <p className="text-gray-700 mb-6 leading-relaxed">{pkg.description}</p>
-                        <div className="space-y-2 mb-6">
-                          {pkg.features.slice(0, 5).map((feature, idx) => (
-                            <motion.div key={idx} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + idx * 0.05 }}
-                              className="flex items-start gap-2 text-sm text-gray-700">
-                              <Check size={16} className="text-primary mt-0.5 flex-shrink-0" />
-                              <span>{feature}</span>
-                            </motion.div>
-                          ))}
-                        </div>
-                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setSelectedPackage(pkg)}
-                          className={`w-full py-3 rounded-xl font-bold transition-all ${
-                            selectedPackage?.id === pkg.id ? 'bg-gradient-to-r from-primary to-yellow-600 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}>
-                          {selectedPackage?.id === pkg.id ? 'Selected' : 'Select Package'}
-                        </motion.button>
-                      </div>
+                {loadingPackages ? (
+                  <div className="flex justify-center items-center py-20">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mx-auto mb-4"></div>
+                      <p className="text-gray-600 font-semibold">Loading packages...</p>
+                    </div>
+                  </div>
+                ) : packages.length === 0 ? (
+                  <div className="backdrop-blur-xl bg-yellow-50/95 border-2 border-yellow-200 rounded-3xl p-12 mb-12 text-center shadow-xl">
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 15 }}>
+                      <Sparkles size={64} className="text-yellow-600 mx-auto mb-6" />
                     </motion.div>
-                  ))}
-                </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">No Packages Available</h3>
+                    <p className="text-gray-700 mb-6 max-w-md mx-auto">
+                      We're currently updating our catering packages. Please check back soon or contact us directly for custom event planning.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                      <motion.a
+                        href="/contact"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-8 py-3 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-xl font-bold shadow-lg"
+                      >
+                        Contact Us
+                      </motion.a>
+                      <motion.a
+                        href="/"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-8 py-3 bg-white border-2 border-primary text-primary rounded-xl font-bold shadow-lg"
+                      >
+                        Back to Home
+                      </motion.a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                    {packages.map((pkg, index) => (
+                      <motion.div key={pkg.id} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}
+                        whileHover={{ y: -15, scale: 1.03 }} onHoverStart={() => setHoveredPackage(pkg.id)} onHoverEnd={() => setHoveredPackage(null)}
+                        onClick={() => setSelectedPackage(pkg)}
+                        className={`cursor-pointer backdrop-blur-xl bg-white/95 border-2 rounded-3xl overflow-hidden shadow-xl transition-all relative ${
+                          selectedPackage?.id === pkg.id ? 'border-primary ring-4 ring-primary/30 shadow-2xl' : 'border-primary/20 hover:border-primary/60'
+                        }`}>
+                        {selectedPackage?.id === pkg.id && (
+                          <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }}
+                            className="absolute top-4 right-4 z-10 w-12 h-12 bg-gradient-to-br from-primary to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
+                            <Check size={24} className="text-white" />
+                          </motion.div>
+                        )}
+                        <div className="relative h-56 overflow-hidden">
+                          {pkg.imageUrl || pkg.image ? (
+                            <motion.img 
+                              src={pkg.imageUrl || pkg.image} 
+                              alt={pkg.name} 
+                              className="w-full h-full object-cover"
+                              animate={{ scale: hoveredPackage === pkg.id ? 1.1 : 1 }} 
+                              transition={{ duration: 0.3 }} 
+                            />
+                          ) : (
+                            <div className={`w-full h-full bg-gradient-to-br ${pkg.gradient || 'from-primary to-yellow-600'} flex items-center justify-center`}>
+                              <Sparkles size={64} className="text-white" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                          <div className="absolute bottom-4 left-4 right-4">
+                            <h3 className="text-2xl font-bold text-white drop-shadow-lg">{pkg.name}</h3>
+                          </div>
+                        </div>
+                        <div className="p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <Sparkles size={28} className="text-primary" />
+                              <span className="text-4xl font-bold text-primary">₱{pkg.price.toLocaleString()}.00</span>
+                            </div>
+                            <span className="text-sm text-gray-600 font-medium">base price</span>
+                          </div>
+                          <p className="text-gray-700 mb-6 leading-relaxed">{pkg.description}</p>
+                          <div className="space-y-2 mb-6">
+                            {pkg.features.slice(0, 5).map((feature, idx) => (
+                              <motion.div key={idx} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + idx * 0.05 }}
+                                className="flex items-start gap-2 text-sm text-gray-700">
+                                <Check size={16} className="text-primary mt-0.5 flex-shrink-0" />
+                                <span>{feature}</span>
+                              </motion.div>
+                            ))}
+                          </div>
+                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setSelectedPackage(pkg)}
+                            className={`w-full py-3 rounded-xl font-bold transition-all ${
+                              selectedPackage?.id === pkg.id ? 'bg-gradient-to-r from-primary to-yellow-600 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}>
+                            {selectedPackage?.id === pkg.id ? 'Selected' : 'Select Package'}
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
                 <div className="flex justify-end">
                   <motion.button whileHover={{ scale: 1.05, x: 5 }} whileTap={{ scale: 0.95 }} onClick={() => canProceedToStep2 && setStep(2)}
                     disabled={!canProceedToStep2}

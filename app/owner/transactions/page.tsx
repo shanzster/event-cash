@@ -58,7 +58,7 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     if (!isManager || !managerUser) {
-      router.push('/manager/login');
+      router.push('/owner/login');
       return;
     }
 

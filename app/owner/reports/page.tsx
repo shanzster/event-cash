@@ -58,7 +58,7 @@ export default function ManagerReports() {
   // Redirect if not manager
   useEffect(() => {
     if (!loading && !isManager) {
-      router.push('/manager/login');
+      router.push('/owner/login');
     }
   }, [loading, isManager, router]);
 

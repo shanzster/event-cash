@@ -158,6 +158,33 @@ export default function BookingDetail() {
     doc.text('ESTIMATED TOTAL:', 20, yPos);
     doc.text(`Php ${booking.totalPrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
 
+    // Terms and Conditions Section
+    yPos += 15;
+    
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(15, yPos, 180, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11);
+    doc.setFont('times', 'bold');
+    doc.text('TERMS AND CONDITIONS', 20, yPos + 5.5);
+    
+    yPos += 12;
+    doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+    doc.setFontSize(9);
+    doc.setFont('times', 'normal');
+    
+    const terms = [
+      '1. Downpayment of 30% is required to secure the booking.',
+      '2. Final payment must be settled before or after the event.',
+      '3. No refunds for cancellations less than 7 days before the event.'
+    ];
+    
+    terms.forEach((term) => {
+      const termLines = doc.splitTextToSize(term, 170);
+      doc.text(termLines, 20, yPos);
+      yPos += termLines.length * 5;
+    });
+
     const eventDateFormatted = format(booking.eventDate, 'MMMM_dd_yyyy');
     const packageNameFormatted = booking.packageName.replace(/\s+/g, '');
     const filename = `${eventDateFormatted}_Booking_${packageNameFormatted}.pdf`;

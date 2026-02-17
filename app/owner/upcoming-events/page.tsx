@@ -58,7 +58,7 @@ export default function UpcomingEventsPage() {
 
   useEffect(() => {
     if (!loading && (!managerUser || !isManager)) {
-      router.push('/manager/login');
+      router.push('/owner/login');
     }
   }, [managerUser, loading, isManager, router]);
 
@@ -223,7 +223,7 @@ export default function UpcomingEventsPage() {
                       <div className="mb-4">
                         <div className="flex items-start justify-between mb-2">
                           <h3 
-                            onClick={() => router.push(`/manager/upcoming-events/${booking.id}`)}
+                            onClick={() => router.push(`/owner/upcoming-events/${booking.id}`)}
                             className="text-xl font-bold text-gray-900 cursor-pointer hover:text-primary"
                           >
                             {booking.customerName}
@@ -283,7 +283,7 @@ export default function UpcomingEventsPage() {
 
                       {/* Click to view */}
                       <div 
-                        onClick={() => router.push(`/manager/upcoming-events/${booking.id}`)}
+                        onClick={() => router.push(`/owner/upcoming-events/${booking.id}`)}
                         className="mt-4 text-center cursor-pointer hover:bg-gray-50 rounded-lg py-2 transition-colors"
                       >
                         <p className="text-sm text-primary font-semibold">Click to view details →</p>

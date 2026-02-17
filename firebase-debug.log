@@ -1,0 +1,39 @@
+[debug] [2026-02-17T02:29:06.446Z] ----------------------------------------------------------------------
+[debug] [2026-02-17T02:29:06.449Z] Command:       D:\node\node.exe C:\Users\Owner\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-02-17T02:29:06.449Z] CLI Version:   15.1.0
+[debug] [2026-02-17T02:29:06.449Z] Platform:      win32
+[debug] [2026-02-17T02:29:06.450Z] Node Version:  v22.19.0
+[debug] [2026-02-17T02:29:06.450Z] Time:          Tue Feb 17 2026 10:29:06 GMT+0800 (Taiwan Standard Time)
+[debug] [2026-02-17T02:29:06.450Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-02-17T02:29:41.905Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-02-17T02:29:41.906Z] > authorizing via signed-in user (chicorlcruz@gmail.com)
+[debug] [2026-02-17T02:29:41.909Z] [iam] checking project eventcash-74a3a for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-02-17T02:29:41.911Z] Checked if tokens are valid: false, expires at: 1771213249079
+[debug] [2026-02-17T02:29:41.911Z] Checked if tokens are valid: false, expires at: 1771213249079
+[debug] [2026-02-17T02:29:41.911Z] > refreshing access token with scopes: []
+[debug] [2026-02-17T02:29:41.914Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-02-17T02:29:41.914Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-17T02:29:42.195Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-02-17T02:29:42.196Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-17T02:29:42.233Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/eventcash-74a3a:testIamPermissions [none]
+[debug] [2026-02-17T02:29:42.233Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/eventcash-74a3a:testIamPermissions x-goog-quota-user=projects/eventcash-74a3a
+[debug] [2026-02-17T02:29:42.234Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/eventcash-74a3a:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-02-17T02:29:43.310Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/eventcash-74a3a:testIamPermissions 200
+[debug] [2026-02-17T02:29:43.311Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/eventcash-74a3a:testIamPermissions {}
+[debug] [2026-02-17T02:29:43.311Z] [iam] error while checking permissions, command may fail: Authorization failed. This account is missing the following required permissions on project eventcash-74a3a:
+
+  firebase.projects.get
+  firebasehosting.sites.update
+[debug] [2026-02-17T02:29:43.312Z] Checked if tokens are valid: true, expires at: 1771298981196
+[debug] [2026-02-17T02:29:43.312Z] Checked if tokens are valid: true, expires at: 1771298981196
+[debug] [2026-02-17T02:29:43.312Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/eventcash-74a3a [none]
+[debug] [2026-02-17T02:29:43.740Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/eventcash-74a3a 403
+[debug] [2026-02-17T02:29:43.740Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/eventcash-74a3a {"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}
+[debug] [2026-02-17T02:29:43.741Z] Request to https://firebase.googleapis.com/v1beta1/projects/eventcash-74a3a had HTTP Error: 403, The caller does not have permission
+[debug] [2026-02-17T02:29:43.956Z] FirebaseError: Request to https://firebase.googleapis.com/v1beta1/projects/eventcash-74a3a had HTTP Error: 403, The caller does not have permission
+    at responseToError (C:\Users\Owner\AppData\Roaming\npm\node_modules\firebase-tools\lib\responseToError.js:53:12)
+    at RetryOperation._fn (C:\Users\Owner\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:322:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+[error] 
+[error] Error: Failed to get Firebase project eventcash-74a3a. Please make sure the project exists and your account has permission to access it.

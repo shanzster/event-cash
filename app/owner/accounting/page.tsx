@@ -71,7 +71,7 @@ export default function ManagerAccounting() {
 
   useEffect(() => {
     if (!loading && !isManager) {
-      router.push('/manager/login');
+      router.push('/owner/login');
     }
   }, [loading, isManager, router]);
 

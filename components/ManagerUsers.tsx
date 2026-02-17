@@ -207,8 +207,8 @@ export default function ManagerUsers() {
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Users & Staff Management</h2>
-            <p className="text-gray-600 mt-1">Manage customer accounts and staff members</p>
+            <h2 className="text-2xl font-bold text-gray-900">Clients & Financial Staff Management</h2>
+            <p className="text-gray-600 mt-1">Manage client accounts and financial staff members</p>
           </div>
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -217,7 +217,7 @@ export default function ManagerUsers() {
             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-lg font-semibold shadow-lg"
           >
             <UserPlus size={20} />
-            Add Staff
+            Add Financial Staff
           </motion.button>
         </div>
 
@@ -241,13 +241,13 @@ export default function ManagerUsers() {
           <p className="text-3xl font-bold text-gray-900 mt-2">{users.length}</p>
         </div>
         <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-purple-500">
-          <p className="text-gray-600 text-sm font-semibold">Managers</p>
+          <p className="text-gray-600 text-sm font-semibold">Owners</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">
             {users.filter(u => u.role === 'manager').length}
           </p>
         </div>
         <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-green-500">
-          <p className="text-gray-600 text-sm font-semibold">Staff</p>
+          <p className="text-gray-600 text-sm font-semibold">Financial Staff</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">
             {users.filter(u => u.role === 'staff').length}
           </p>
@@ -303,7 +303,7 @@ export default function ManagerUsers() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getRoleBadge(user.role || 'customer')}`}>
-                      {user.role || 'customer'}
+                      {user.role === 'manager' ? 'owner' : user.role || 'customer'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-600">
@@ -453,7 +453,7 @@ export default function ManagerUsers() {
                   >
                     <option value="customer">Customer</option>
                     <option value="staff">Staff</option>
-                    <option value="manager">Manager</option>
+                    <option value="manager">Owner</option>
                   </select>
                 </div>
                 <div>
@@ -609,7 +609,7 @@ export default function ManagerUsers() {
                   >
                     <option value="customer">Customer</option>
                     <option value="staff">Staff</option>
-                    <option value="manager">Manager</option>
+                    <option value="manager">Owner</option>
                   </select>
                 </div>
                 <div>

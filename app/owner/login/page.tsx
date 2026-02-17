@@ -24,7 +24,7 @@ export default function ManagerLogin() {
   // Redirect if already logged in as manager
   useEffect(() => {
     if (!loading && isManager) {
-      router.push('/manager/dashboard');
+      router.push('/owner/dashboard');
     }
   }, [loading, isManager, router]);
 
@@ -49,7 +49,7 @@ export default function ManagerLogin() {
 
     try {
       await managerLogin(email, password);
-      router.push('/manager/dashboard');
+      router.push('/owner/dashboard');
     } catch (err: any) {
       console.error('Manager login error:', err);
 
@@ -102,7 +102,7 @@ export default function ManagerLogin() {
               <div className="w-16 h-16 bg-gradient-to-br from-primary to-yellow-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
                 <Shield className="text-white" size={32} />
               </div>
-              <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-gray-900">Manager Portal</h1>
+              <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-gray-900">Owner Portal</h1>
               <p className="text-gray-600">
                 Access your management dashboard
               </p>
