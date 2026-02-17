@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserPlus, Mail, Shield, Trash2, Edit2, Search, X } from 'lucide-react';
-import { collection, getDocs, query, orderBy, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, getDocs, query, orderBy, addDoc, updateDoc, deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 interface User {
   id: string;
@@ -89,18 +90,59 @@ export default function ManagerUsers() {
     }
 
     try {
-      await addDoc(collection(db, 'users'), {
-        displayName: formData.displayName,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zipCode: formData.zipCode,
-        role: formData.role,
-        password: formData.password,
-        createdAt: new Date(),
-      });
+      // If adding an owner/manager, create Firebase Auth account
+      if (formData.role === 'manager') {
+        // Create Firebase Auth account
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        const user = userCredential.user;
+
+        // Create manager document in 'managers' collection with UID as document ID
+        const managerDocRef = doc(db, 'managers', user.uid);
+        await setDoc(managerDocRef, {
+          uid: user.uid,
+          email: formData.email,
+          displayName: formData.displayName,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+          role: 'manager',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+
+        // Also create in users collection for reference
+        await addDoc(collection(db, 'users'), {
+          uid: user.uid,
+          displayName: formData.displayName,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+          role: 'manager',
+          createdAt: new Date(),
+        });
+
+        // Note: We don't sign out the newly created user to avoid disrupting the current session
+        // The newly created owner can login separately at /owner/login
+      } else {
+        // For staff and customers, just create in users collection with password
+        await addDoc(collection(db, 'users'), {
+          displayName: formData.displayName,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+          role: formData.role,
+          password: formData.password,
+          createdAt: new Date(),
+        });
+      }
 
       setFormData({
         displayName: '',
@@ -115,10 +157,14 @@ export default function ManagerUsers() {
       });
       setShowAddModal(false);
       fetchUsers();
-      alert('User added successfully!');
-    } catch (error) {
+      alert(`${formData.role === 'manager' ? 'Owner' : 'User'} added successfully!${formData.role === 'manager' ? ' They can now login at /owner/login' : ''}`);
+    } catch (error: any) {
       console.error('Error adding user:', error);
-      alert('Failed to add user');
+      if (error.code === 'auth/email-already-in-use') {
+        alert('This email is already registered');
+      } else {
+        alert('Failed to add user: ' + error.message);
+      }
     }
   };
 
@@ -207,8 +253,8 @@ export default function ManagerUsers() {
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Clients & Financial Staff Management</h2>
-            <p className="text-gray-600 mt-1">Manage client accounts and financial staff members</p>
+            <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+            <p className="text-gray-600 mt-1">Manage client accounts, staff members, and owner accounts</p>
           </div>
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -217,7 +263,7 @@ export default function ManagerUsers() {
             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-lg font-semibold shadow-lg"
           >
             <UserPlus size={20} />
-            Add Financial Staff
+            Add User
           </motion.button>
         </div>
 
@@ -247,7 +293,7 @@ export default function ManagerUsers() {
           </p>
         </div>
         <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-green-500">
-          <p className="text-gray-600 text-sm font-semibold">Financial Staff</p>
+          <p className="text-gray-600 text-sm font-semibold">Staff</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">
             {users.filter(u => u.role === 'staff').length}
           </p>
