@@ -1,15 +1,58 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { motion } from 'framer-motion';
 import { MapPin, Phone, Mail, Clock, Car, Train } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface ContactInfo {
+  phone: string;
+  email: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+  hours: {
+    weekdays: string;
+    weekends: string;
+  };
+  social: {
+    facebook: string;
+    instagram: string;
+    twitter: string;
+  };
+  mapUrl?: string;
+}
 
 /**
  * Location Page
  * Displays company location with embedded map and directions
  */
 export default function Location() {
+  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+
+  useEffect(() => {
+    fetchContactInfo();
+  }, []);
+
+  const fetchContactInfo = async () => {
+    try {
+      const docRef = doc(db, 'settings', 'contact');
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        setContactInfo(docSnap.data() as ContactInfo);
+      }
+    } catch (error) {
+      console.error('Error fetching contact info:', error);
+    }
+  };
   return (
     <>
       <Navigation />
@@ -61,7 +104,7 @@ export default function Location() {
               className="rounded-3xl overflow-hidden shadow-2xl border-2 border-primary/30"
             >
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3024.2219901290355!2d-74.00601!3d40.71282!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25a20f96bfe8d%3A0x7685d66de8e0f1a4!2s123%20Main%20St%2C%20New%20York%2C%20NY%2010001!5e0!3m2!1sen!2sus!4v1234567890"
+                src={contactInfo?.mapUrl || "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3024.2219901290355!2d-74.00601!3d40.71282!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25a20f96bfe8d%3A0x7685d66de8e0f1a4!2s123%20Main%20St%2C%20New%20York%2C%20NY%2010001!5e0!3m2!1sen!2sus!4v1234567890"}
                 width="100%"
                 height="500"
                 style={{ border: 0 }}
@@ -102,9 +145,9 @@ export default function Location() {
                   <div>
                     <h3 className="font-bold text-lg mb-2 text-gray-900">Main Office</h3>
                     <p className="text-gray-700 font-medium">
-                      123 Culinary Lane<br />
-                      Gourmet City, FC 12345<br />
-                      United States
+                      {contactInfo?.address.street || '123 Culinary Lane'}<br />
+                      {contactInfo?.address.city || 'Gourmet City'}, {contactInfo?.address.state || 'FC'} {contactInfo?.address.zip || '12345'}<br />
+                      {contactInfo?.address.country || 'United States'}
                     </p>
                   </div>
                 </div>
@@ -130,10 +173,10 @@ export default function Location() {
                   <div>
                     <h3 className="font-bold text-lg mb-2 text-gray-900">Phone</h3>
                     <a
-                      href="tel:+15551234567"
+                      href={`tel:${contactInfo?.phone || '+15551234567'}`}
                       className="text-gray-700 hover:text-primary transition-colors font-medium"
                     >
-                      (555) 123-4567
+                      {contactInfo?.phone || '(555) 123-4567'}
                     </a>
                   </div>
                 </div>
@@ -159,10 +202,10 @@ export default function Location() {
                   <div>
                     <h3 className="font-bold text-lg mb-2 text-gray-900">Email</h3>
                     <a
-                      href="mailto:info@eventcash.com"
+                      href={`mailto:${contactInfo?.email || 'info@eventcash.com'}`}
                       className="text-gray-700 hover:text-primary transition-colors font-medium"
                     >
-                      info@eventcash.com
+                      {contactInfo?.email || 'info@eventcash.com'}
                     </a>
                   </div>
                 </div>
@@ -188,8 +231,8 @@ export default function Location() {
                   <div>
                     <h3 className="font-bold text-lg mb-2 text-gray-900">Hours</h3>
                     <p className="text-gray-700 text-sm font-medium">
-                      <span className="block">Mon - Fri: 9:00 AM - 6:00 PM</span>
-                      <span className="block">Sat - Sun: 10:00 AM - 4:00 PM</span>
+                      <span className="block">Mon - Fri: {contactInfo?.hours.weekdays || '9:00 AM - 6:00 PM'}</span>
+                      <span className="block">Sat - Sun: {contactInfo?.hours.weekends || '10:00 AM - 4:00 PM'}</span>
                     </p>
                   </div>
                 </div>

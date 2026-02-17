@@ -1,40 +1,91 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, Award, Heart } from 'lucide-react';
-
-const stats = [
-  {
-    id: 1,
-    number: '500+',
-    label: 'Events Catered',
-    icon: TrendingUp,
-    gradient: 'from-primary to-yellow-500',
-  },
-  {
-    id: 2,
-    number: '10,000+',
-    label: 'Happy Guests',
-    icon: Users,
-    gradient: 'from-yellow-500 to-yellow-600',
-  },
-  {
-    id: 3,
-    number: '25+',
-    label: 'Awards Won',
-    icon: Award,
-    gradient: 'from-yellow-600 to-primary',
-  },
-  {
-    id: 4,
-    number: '98%',
-    label: 'Client Satisfaction',
-    icon: Heart,
-    gradient: 'from-primary to-yellow-500',
-  },
-];
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function StatsSection() {
+  const [stats, setStats] = useState([
+    {
+      id: 1,
+      number: '500+',
+      label: 'Events Catered',
+      icon: TrendingUp,
+      gradient: 'from-primary to-yellow-500',
+    },
+    {
+      id: 2,
+      number: '10,000+',
+      label: 'Happy Guests',
+      icon: Users,
+      gradient: 'from-yellow-500 to-yellow-600',
+    },
+    {
+      id: 3,
+      number: '25+',
+      label: 'Awards Won',
+      icon: Award,
+      gradient: 'from-yellow-600 to-primary',
+    },
+    {
+      id: 4,
+      number: '98%',
+      label: 'Client Satisfaction',
+      icon: Heart,
+      gradient: 'from-primary to-yellow-500',
+    },
+  ]);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const docRef = doc(db, 'cms', 'content');
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.home?.stats) {
+          setStats([
+            {
+              id: 1,
+              number: data.home.stats.eventsCatered || '500+',
+              label: 'Events Catered',
+              icon: TrendingUp,
+              gradient: 'from-primary to-yellow-500',
+            },
+            {
+              id: 2,
+              number: data.home.stats.happyGuests || '10,000+',
+              label: 'Happy Guests',
+              icon: Users,
+              gradient: 'from-yellow-500 to-yellow-600',
+            },
+            {
+              id: 3,
+              number: data.home.stats.awardsWon || '25+',
+              label: 'Awards Won',
+              icon: Award,
+              gradient: 'from-yellow-600 to-primary',
+            },
+            {
+              id: 4,
+              number: data.home.stats.clientSatisfaction || '98%',
+              label: 'Client Satisfaction',
+              icon: Heart,
+              gradient: 'from-primary to-yellow-500',
+            },
+          ]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
   return (
     <section className="py-20 px-4 sm:px-6 relative overflow-hidden">
       {/* Background with image */}

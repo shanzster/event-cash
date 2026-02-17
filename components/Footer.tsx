@@ -1,8 +1,32 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Facebook, Instagram, Twitter, Mail, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface ContactInfo {
+  phone: string;
+  email: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+  hours: {
+    weekdays: string;
+    weekends: string;
+  };
+  social: {
+    facebook: string;
+    instagram: string;
+    twitter: string;
+  };
+}
 
 /**
  * Footer Component
@@ -11,6 +35,24 @@ import { motion } from 'framer-motion';
  */
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+
+  useEffect(() => {
+    fetchContactInfo();
+  }, []);
+
+  const fetchContactInfo = async () => {
+    try {
+      const docRef = doc(db, 'settings', 'contact');
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        setContactInfo(docSnap.data() as ContactInfo);
+      }
+    } catch (error) {
+      console.error('Error fetching contact info:', error);
+    }
+  };
 
   return (
     <footer className="bg-gradient-to-b from-white via-primary/5 to-primary/10 text-gray-900 mt-20 relative border-t-2 border-primary/20">
@@ -31,12 +73,12 @@ export default function Footer() {
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-3">
                 <Phone size={18} className="text-primary flex-shrink-0" />
-                <span>(555) 123-4567</span>
+                <span>{contactInfo?.phone || '(555) 123-4567'}</span>
               </div>
               <div className="flex items-center gap-3">
                 <Mail size={18} className="text-primary flex-shrink-0" />
-                <a href="mailto:info@eventcash.com" className="hover:text-primary transition-colors">
-                  info@eventcash.com
+                <a href={`mailto:${contactInfo?.email || 'info@eventcash.com'}`} className="hover:text-primary transition-colors">
+                  {contactInfo?.email || 'info@eventcash.com'}
                 </a>
               </div>
             </div>
@@ -101,13 +143,15 @@ export default function Footer() {
             <h3 className="font-bold text-lg mb-4">Follow Us</h3>
             <div className="flex gap-4">
               {[
-                { icon: Facebook, href: '#', label: 'Facebook' },
-                { icon: Instagram, href: '#', label: 'Instagram' },
-                { icon: Twitter, href: '#', label: 'Twitter' },
+                { icon: Facebook, href: contactInfo?.social?.facebook || '#', label: 'Facebook' },
+                { icon: Instagram, href: contactInfo?.social?.instagram || '#', label: 'Instagram' },
+                { icon: Twitter, href: contactInfo?.social?.twitter || '#', label: 'Twitter' },
               ].map(({ icon: Icon, href, label }) => (
                 <motion.a
                   key={label}
                   href={href}
+                  target={href !== '#' ? '_blank' : undefined}
+                  rel={href !== '#' ? 'noopener noreferrer' : undefined}
                   whileHover={{ scale: 1.2, rotate: 5 }}
                   whileTap={{ scale: 0.9 }}
                   className="w-10 h-10 backdrop-blur-xl bg-white/70 border-2 border-primary/30 rounded-full flex items-center justify-center shadow-lg"

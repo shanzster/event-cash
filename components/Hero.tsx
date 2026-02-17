@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ChefHat } from 'lucide-react';
 import { motion } from 'framer-motion';
+import EditableText from './EditableText';
 
 /**
  * Hero Component
@@ -51,7 +52,11 @@ export default function Hero() {
             transition={{ duration: 5, repeat: Infinity, ease: 'linear' }}
             style={{ backgroundSize: '200% 200%' }}
           >
-            EventCash
+            <EditableText
+              contentKey="home.hero.title"
+              defaultValue="EventCash"
+              as="span"
+            />
           </motion.span>
         </motion.h1>
 
@@ -62,8 +67,12 @@ export default function Hero() {
           transition={{ duration: 0.8, delay: 0.4 }}
           className="text-sm sm:text-base md:text-lg text-white/90 max-w-2xl mx-auto mb-12 leading-relaxed drop-shadow-lg"
         >
-          Elevate your events with exquisite catering from EventCash Catering. 
-          Premium culinary excellence for every occasion.
+          <EditableText
+            contentKey="home.hero.subtitle"
+            defaultValue="Elevate your events with exquisite catering from EventCash Catering. Premium culinary excellence for every occasion."
+            as="span"
+            multiline
+          />
         </motion.p>
 
         {/* CTA Buttons */}

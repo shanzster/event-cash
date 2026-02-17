@@ -66,16 +66,7 @@ export default function Services() {
   const router = useRouter();
   const { user, loading } = useAuth();
 
-  useEffect(() => {
-    // Redirect logged-in users to dashboard
-    if (!loading && user) {
-      router.push('/dashboard');
-    }
-  }, [user, loading, router]);
-
-  if (loading || user) {
-    return null;
-  }
+  // Removed auto-redirect to dashboard - users can view public pages even when logged in
 
   return (
     <>

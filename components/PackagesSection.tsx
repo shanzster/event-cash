@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { Users, Utensils, Sparkles, X, Package as PackageIcon } from 'lucide-react';
+import { Users, Utensils, Sparkles, X, Package as PackageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -13,6 +13,7 @@ interface Package {
   description: string;
   features: string[];
   imageUrl?: string;
+  gallery?: string[]; // NEW: Array of images for carousel
   icon: string;
   gradient: string;
 }
@@ -30,10 +31,34 @@ export default function PackagesSection() {
   const [hoveredPackage, setHoveredPackage] = useState<string | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     fetchPackages();
   }, []);
+
+  useEffect(() => {
+    // Reset image index when package changes
+    if (selectedPackage) {
+      setCurrentImageIndex(0);
+    }
+  }, [selectedPackage]);
+
+  const nextImage = () => {
+    if (selectedPackage && selectedPackage.gallery && selectedPackage.gallery.length > 0) {
+      setCurrentImageIndex((prev) => 
+        prev === selectedPackage.gallery!.length - 1 ? 0 : prev + 1
+      );
+    }
+  };
+
+  const prevImage = () => {
+    if (selectedPackage && selectedPackage.gallery && selectedPackage.gallery.length > 0) {
+      setCurrentImageIndex((prev) => 
+        prev === 0 ? selectedPackage.gallery!.length - 1 : prev - 1
+      );
+    }
+  };
 
   const fetchPackages = async () => {
     try {
@@ -150,7 +175,20 @@ export default function PackagesSection() {
                   <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${pkg.gradient} opacity-20 rounded-bl-full`} />
 
                   {/* Package Image or Gradient */}
-                  {pkg.imageUrl ? (
+                  {pkg.gallery && pkg.gallery.length > 0 ? (
+                    <div className="h-48 overflow-hidden relative">
+                      <img
+                        src={pkg.gallery[0]}
+                        alt={pkg.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      {pkg.gallery.length > 1 && (
+                        <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-3 py-1 rounded-full font-semibold">
+                          +{pkg.gallery.length - 1} more
+                        </div>
+                      )}
+                    </div>
+                  ) : pkg.imageUrl ? (
                     <div className="h-48 overflow-hidden">
                       <img
                         src={pkg.imageUrl}
@@ -243,7 +281,7 @@ export default function PackagesSection() {
               exit={{ scale: 0.8, opacity: 0 }}
               transition={{ duration: 0.3 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-w-4xl w-full max-h-[90vh] backdrop-blur-2xl bg-white/95 border-2 border-primary/30 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl"
+              className="relative max-w-6xl w-full max-h-[90vh] backdrop-blur-2xl bg-white/95 border-2 border-primary/30 rounded-3xl overflow-hidden shadow-2xl"
             >
               {/* Close button */}
               <button
@@ -253,31 +291,95 @@ export default function PackagesSection() {
                 <X size={24} className="text-gray-900" />
               </button>
 
-              <div className="overflow-y-auto max-h-[90vh]">
-                {/* Package Image or Gradient */}
-                {selectedPackage.imageUrl ? (
-                  <div className="h-64 md:h-80 overflow-hidden">
-                    <img
-                      src={selectedPackage.imageUrl}
-                      alt={selectedPackage.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className={`h-64 md:h-80 bg-gradient-to-br ${selectedPackage.gradient} flex items-center justify-center`}>
-                    {(() => {
-                      const Icon = iconMap[selectedPackage.icon] || PackageIcon;
-                      return <Icon size={80} className="text-white" />;
-                    })()}
-                  </div>
-                )}
+              <div className="grid md:grid-cols-2 gap-0 h-full max-h-[90vh]">
+                {/* LEFT SIDE - Image Gallery */}
+                <div className="relative bg-gray-900 flex items-center justify-center min-h-[40vh] md:min-h-full">
+                  {selectedPackage.gallery && selectedPackage.gallery.length > 0 ? (
+                    <motion.div 
+                      className="relative w-full h-full flex items-center justify-center p-4"
+                      drag="x"
+                      dragConstraints={{ left: 0, right: 0 }}
+                      dragElastic={0.2}
+                      onDragEnd={(e, { offset, velocity }) => {
+                        const swipe = Math.abs(offset.x) * velocity.x;
+                        if (swipe < -10000) {
+                          nextImage();
+                        } else if (swipe > 10000) {
+                          prevImage();
+                        }
+                      }}
+                    >
+                      <img
+                        src={selectedPackage.gallery[currentImageIndex]}
+                        alt={`${selectedPackage.name} - Image ${currentImageIndex + 1}`}
+                        className="max-w-full max-h-full object-contain"
+                        style={{ maxHeight: 'calc(90vh - 2rem)' }}
+                      />
 
-                {/* Package details */}
-                <div className="p-6 sm:p-8 md:p-12">
-                  <div className={`inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br ${selectedPackage.gradient} rounded-2xl mb-6 md:mb-8 shadow-xl -mt-16 md:-mt-20`}>
+                      {/* Navigation arrows - only show if more than 1 image */}
+                      {selectedPackage.gallery.length > 1 && (
+                        <>
+                          <button
+                            onClick={prevImage}
+                            className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 w-10 h-10 md:w-14 md:h-14 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110 z-10"
+                          >
+                            <ChevronLeft size={20} className="text-gray-900 md:hidden" />
+                            <ChevronLeft size={28} className="text-gray-900 hidden md:block" />
+                          </button>
+                          <button
+                            onClick={nextImage}
+                            className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 w-10 h-10 md:w-14 md:h-14 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110 z-10"
+                          >
+                            <ChevronRight size={20} className="text-gray-900 md:hidden" />
+                            <ChevronRight size={28} className="text-gray-900 hidden md:block" />
+                          </button>
+
+                          {/* Image indicators */}
+                          <div className="absolute bottom-3 md:bottom-6 left-1/2 -translate-x-1/2 flex gap-2 md:gap-3 z-10">
+                            {selectedPackage.gallery.map((_, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => setCurrentImageIndex(idx)}
+                                className={`h-2 md:h-3 rounded-full transition-all ${
+                                  idx === currentImageIndex
+                                    ? 'bg-white w-8 md:w-12'
+                                    : 'bg-white/50 w-2 md:w-3 hover:bg-white/75'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </motion.div>
+                  ) : selectedPackage.imageUrl ? (
+                    <div className="w-full h-full flex items-center justify-center p-4">
+                      <img
+                        src={selectedPackage.imageUrl}
+                        alt={selectedPackage.name}
+                        className="max-w-full max-h-full object-contain"
+                        style={{ maxHeight: 'calc(90vh - 2rem)' }}
+                      />
+                    </div>
+                  ) : (
+                    <div className={`w-full h-full bg-gradient-to-br ${selectedPackage.gradient} flex items-center justify-center`}>
+                      {(() => {
+                        const Icon = iconMap[selectedPackage.icon] || PackageIcon;
+                        return <Icon size={80} className="text-white" />;
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* RIGHT SIDE - Package details */}
+                <div className="p-6 sm:p-8 md:p-10 lg:p-12 overflow-y-auto max-h-[50vh] md:max-h-full bg-gradient-to-br from-white via-white to-primary/5">
+                  <div className={`inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br ${selectedPackage.gradient} rounded-2xl mb-6 md:mb-8 shadow-xl`}>
                     {(() => {
                       const Icon = iconMap[selectedPackage.icon] || PackageIcon;
-                      return <Icon size={40} className="text-white" />;
+                      return <Icon size={32} className="text-white md:hidden" />;
+                    })()}
+                    {(() => {
+                      const Icon = iconMap[selectedPackage.icon] || PackageIcon;
+                      return <Icon size={40} className="text-white hidden md:block" />;
                     })()}
                   </div>
 

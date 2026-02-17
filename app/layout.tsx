@@ -4,6 +4,7 @@ import { Poppins, Geist_Mono } from 'next/font/google'
 import FloatingIcons from '@/components/FloatingIcons'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ManagerProvider } from '@/contexts/ManagerContext'
+import { EditModeProvider } from '@/contexts/EditModeContext'
 import './globals.css'
 
 const poppins = Poppins({ 
@@ -52,8 +53,10 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         <AuthProvider>
           <ManagerProvider>
-            <FloatingIcons />
-            {children}
+            <EditModeProvider>
+              <FloatingIcons />
+              {children}
+            </EditModeProvider>
           </ManagerProvider>
         </AuthProvider>
       </body>

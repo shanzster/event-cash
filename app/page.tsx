@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useManager } from '@/contexts/ManagerContext';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import Hero from '@/components/Hero';
@@ -11,41 +12,27 @@ import EventTypesSection from '@/components/EventTypesSection';
 import ProcessSection from '@/components/ProcessSection';
 import TestimonialsSection from '@/components/TestimonialsSection';
 import StatsSection from '@/components/StatsSection';
+import EditModeToolbar from '@/components/EditModeToolbar';
+import EditableText from '@/components/EditableText';
 import { Award, Users, Heart } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 /**
  * Home Page - Landing Page
  * Showcases the company's main offering and value proposition
- * Redirects logged-in users to dashboard
+ * Public page - no auto-redirect for logged-in users
  */
 export default function Home() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { isManager } = useManager();
 
-  useEffect(() => {
-    // Redirect logged-in users to dashboard
-    if (!loading && user) {
-      router.push('/dashboard');
-    }
-  }, [user, loading, router]);
+  console.log('🏠 HOME PAGE: Rendering');
+  console.log('🏠 User:', user?.email || 'null');
+  console.log('🏠 Loading:', loading);
+  console.log('🏠 URL:', typeof window !== 'undefined' ? window.location.href : 'SSR');
 
-  // Show loading state while checking auth
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render if user is logged in (will redirect)
-  if (user) {
-    return null;
-  }
+  // NO AUTO-REDIRECT - Allow logged-in users to view the home page
 
   const cardVariants = {
     hidden: { opacity: 0, y: 50 },
@@ -61,8 +48,12 @@ export default function Home() {
   };
 
   return (
-    <>
+    <div className="min-h-screen bg-white">
       <Navigation />
+      
+      {/* Edit Mode Toolbar - Only visible to managers */}
+      <EditModeToolbar />
+
       <main className="relative z-10">
         {/* Hero Section */}
         <Hero />
@@ -89,7 +80,11 @@ export default function Home() {
               transition={{ duration: 0.6 }}
               className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-12 bg-gradient-to-r from-primary via-yellow-600 to-primary bg-clip-text text-transparent text-balance"
             >
-              Why Choose EventCash?
+              <EditableText
+                contentKey="home.whyus.title"
+                defaultValue="Why Choose EventCash?"
+                as="span"
+              />
             </motion.h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
@@ -137,9 +132,19 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent rounded-2xl" />
                     <Award size={26} className="text-white relative z-10" />
                   </motion.div>
-                  <h3 className="text-xl font-bold mb-3 text-gray-900 group-hover:text-primary transition-colors">Excellence & Quality</h3>
+                  <h3 className="text-xl font-bold mb-3 text-gray-900 group-hover:text-primary transition-colors">
+                    <EditableText
+                      contentKey="home.feature1.title"
+                      defaultValue="Excellence & Quality"
+                      as="span"
+                    />
+                  </h3>
                   <p className="text-sm text-gray-700 leading-relaxed">
-                    Award-winning chefs and premium ingredients for exceptional cuisine.
+                    <EditableText
+                      contentKey="home.feature1.description"
+                      defaultValue="Award-winning chefs and premium ingredients for exceptional cuisine."
+                      as="span"
+                    />
                   </p>
                   
                   {/* Decorative bottom line */}
@@ -196,9 +201,19 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent rounded-2xl" />
                     <Users size={26} className="text-white relative z-10" />
                   </motion.div>
-                  <h3 className="text-xl font-bold mb-3 text-gray-900 group-hover:text-primary transition-colors">Professional Team</h3>
+                  <h3 className="text-xl font-bold mb-3 text-gray-900 group-hover:text-primary transition-colors">
+                    <EditableText
+                      contentKey="home.feature2.title"
+                      defaultValue="Professional Team"
+                      as="span"
+                    />
+                  </h3>
                   <p className="text-sm text-gray-700 leading-relaxed">
-                    Expert staff for seamless execution and impeccable service.
+                    <EditableText
+                      contentKey="home.feature2.description"
+                      defaultValue="Expert staff for seamless execution and impeccable service."
+                      as="span"
+                    />
                   </p>
                   
                   {/* Decorative bottom line */}
@@ -255,9 +270,19 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent rounded-2xl" />
                     <Heart size={26} className="text-white relative z-10" />
                   </motion.div>
-                  <h3 className="text-xl font-bold mb-3 text-gray-900 group-hover:text-primary transition-colors">Personalized Touch</h3>
+                  <h3 className="text-xl font-bold mb-3 text-gray-900 group-hover:text-primary transition-colors">
+                    <EditableText
+                      contentKey="home.feature3.title"
+                      defaultValue="Personalized Touch"
+                      as="span"
+                    />
+                  </h3>
                   <p className="text-sm text-gray-700 leading-relaxed">
-                    Custom menus tailored to your preferences and dietary needs.
+                    <EditableText
+                      contentKey="home.feature3.description"
+                      defaultValue="Custom menus tailored to your preferences and dietary needs."
+                      as="span"
+                    />
                   </p>
                   
                   {/* Decorative bottom line */}
@@ -293,7 +318,11 @@ export default function Home() {
               transition={{ delay: 0.2, duration: 0.6 }}
               className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-primary via-yellow-600 to-primary bg-clip-text text-transparent text-balance"
             >
-              Ready to Plan Your Event?
+              <EditableText
+                contentKey="home.cta.title"
+                defaultValue="Ready to Plan Your Event?"
+                as="span"
+              />
             </motion.h2>
             <motion.p 
               initial={{ opacity: 0 }}
@@ -302,7 +331,11 @@ export default function Home() {
               transition={{ delay: 0.4, duration: 0.6 }}
               className="text-sm sm:text-base md:text-lg text-gray-700 mb-8 leading-relaxed"
             >
-              Let's create a memorable culinary experience for your special occasion.
+              <EditableText
+                contentKey="home.cta.description"
+                defaultValue="Let's create a memorable culinary experience for your special occasion."
+                as="span"
+              />
             </motion.p>
             <motion.a
               href="/contact"
@@ -323,6 +356,6 @@ export default function Home() {
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

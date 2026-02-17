@@ -44,12 +44,26 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  // Check if we're in CMS preview mode (inside an iframe with cms=true parameter)
+  const isCMSPreview = typeof window !== 'undefined' && 
+                       window.location.search.includes('cms=true') &&
+                       window.self !== window.top; // Only disable auth if inside an iframe
+  
   // Don't restore from localStorage on mount - let onAuthStateChanged handle it
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // If in CMS preview mode (inside iframe), don't set up auth listener
+    if (isCMSPreview) {
+      console.log('🔥 AUTH PROVIDER: CMS preview mode (iframe) - skipping auth');
+      setUser(null);
+      setUserData(null);
+      setLoading(false);
+      return;
+    }
+    
     if (process.env.NODE_ENV === 'development') {
       console.log('🔥 AUTH PROVIDER: Setting up auth listener');
     }
@@ -115,7 +129,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isSubscribed = false;
       unsubscribe();
     };
-  }, []);
+  }, [isCMSPreview]);
 
   const signup = async (email: string, password: string, displayName: string, phoneNumber?: string) => {
     try {

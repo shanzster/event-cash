@@ -1,10 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, Facebook, Instagram, Twitter, Clock } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface ContactInfo {
+  phone: string;
+  email: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+  hours: {
+    weekdays: string;
+    weekends: string;
+  };
+  social: {
+    facebook: string;
+    instagram: string;
+    twitter: string;
+  };
+  mapUrl?: string;
+}
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -15,6 +39,24 @@ export default function Contact() {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+
+  useEffect(() => {
+    fetchContactInfo();
+  }, []);
+
+  const fetchContactInfo = async () => {
+    try {
+      const docRef = doc(db, 'settings', 'contact');
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        setContactInfo(docSnap.data() as ContactInfo);
+      }
+    } catch (error) {
+      console.error('Error fetching contact info:', error);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -105,10 +147,10 @@ export default function Contact() {
                   <h3 className="font-bold text-gray-900">Phone</h3>
                 </div>
                 <a
-                  href="tel:+15551234567"
+                  href={`tel:${contactInfo?.phone || '+15551234567'}`}
                   className="text-gray-700 hover:text-primary transition-colors font-medium"
                 >
-                  (555) 123-4567
+                  {contactInfo?.phone || '(555) 123-4567'}
                 </a>
               </motion.div>
 
@@ -132,10 +174,10 @@ export default function Contact() {
                   <h3 className="font-bold text-gray-900">Email</h3>
                 </div>
                 <a
-                  href="mailto:info@eventcash.com"
+                  href={`mailto:${contactInfo?.email || 'info@eventcash.com'}`}
                   className="text-gray-700 hover:text-primary transition-colors font-medium"
                 >
-                  info@eventcash.com
+                  {contactInfo?.email || 'info@eventcash.com'}
                 </a>
               </motion.div>
 
@@ -159,9 +201,9 @@ export default function Contact() {
                   <h3 className="font-bold text-gray-900">Location</h3>
                 </div>
                 <p className="text-gray-700 font-medium">
-                  123 Culinary Lane<br />
-                  Gourmet City, FC 12345<br />
-                  United States
+                  {contactInfo?.address.street || '123 Culinary Lane'}<br />
+                  {contactInfo?.address.city || 'Gourmet City'}, {contactInfo?.address.state || 'FC'} {contactInfo?.address.zip || '12345'}<br />
+                  {contactInfo?.address.country || 'United States'}
                 </p>
               </motion.div>
 
@@ -176,13 +218,15 @@ export default function Contact() {
                 <h3 className="font-bold mb-4 text-gray-900">Follow Us</h3>
                 <div className="flex gap-4">
                   {[
-                    { icon: Facebook, label: 'Facebook' },
-                    { icon: Instagram, label: 'Instagram' },
-                    { icon: Twitter, label: 'Twitter' },
-                  ].map(({ icon: Icon, label }) => (
+                    { icon: Facebook, label: 'Facebook', href: contactInfo?.social?.facebook || '#' },
+                    { icon: Instagram, label: 'Instagram', href: contactInfo?.social?.instagram || '#' },
+                    { icon: Twitter, label: 'Twitter', href: contactInfo?.social?.twitter || '#' },
+                  ].map(({ icon: Icon, label, href }) => (
                     <motion.a
                       key={label}
-                      href="#"
+                      href={href}
+                      target={href !== '#' ? '_blank' : undefined}
+                      rel={href !== '#' ? 'noopener noreferrer' : undefined}
                       whileHover={{ scale: 1.2, rotate: 5 }}
                       whileTap={{ scale: 0.9 }}
                       className="w-12 h-12 backdrop-blur-xl bg-white/70 border-2 border-primary/30 rounded-full flex items-center justify-center shadow-lg"
@@ -319,14 +363,14 @@ export default function Contact() {
                     <Clock size={24} className="text-white" />
                   </div>
                   <h3 className="font-bold mb-2 text-primary text-lg">Monday - Friday</h3>
-                  <p className="text-lg text-gray-900 font-semibold">9:00 AM - 6:00 PM</p>
+                  <p className="text-lg text-gray-900 font-semibold">{contactInfo?.hours.weekdays || '9:00 AM - 6:00 PM'}</p>
                 </div>
                 <div>
                   <div className="w-12 h-12 bg-gradient-to-br from-yellow-600 to-primary rounded-xl flex items-center justify-center mx-auto mb-4">
                     <Clock size={24} className="text-white" />
                   </div>
                   <h3 className="font-bold mb-2 text-yellow-600 text-lg">Saturday - Sunday</h3>
-                  <p className="text-lg text-gray-900 font-semibold">10:00 AM - 4:00 PM</p>
+                  <p className="text-lg text-gray-900 font-semibold">{contactInfo?.hours.weekends || '10:00 AM - 4:00 PM'}</p>
                 </div>
               </div>
             </motion.div>
