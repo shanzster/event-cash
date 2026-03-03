@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Search, Filter, Eye, Check, X, Clock, Calendar, MapPin, User, Package, Printer, FileSpreadsheet, Plus, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 import BookForClientModal from './BookForClientModal';
+import DeleteBookingButton from './DeleteBookingButton';
 import { formatCurrency } from '@/lib/currency';
 
 interface Booking {
@@ -30,9 +31,10 @@ interface ManagerBookingsProps {
   onUpdateStatus: (bookingId: string, newStatus: string) => void;
   managerId?: string;
   onBookingCreated?: () => void;
+  onDeleteBooking?: (bookingId: string) => void;
 }
 
-export default function ManagerBookings({ bookings, onUpdateStatus, managerId = '', onBookingCreated }: ManagerBookingsProps) {
+export default function ManagerBookings({ bookings, onUpdateStatus, managerId = '', onBookingCreated, onDeleteBooking }: ManagerBookingsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -381,9 +383,10 @@ export default function ManagerBookings({ bookings, onUpdateStatus, managerId = 
           filteredBookings.map((booking) => (
             <motion.div
               key={booking.id}
+              id={`booking-${booking.id}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow print-booking-card"
+              className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all print-booking-card scroll-mt-24"
             >
               <div className="p-6">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -482,6 +485,17 @@ export default function ManagerBookings({ bookings, onUpdateStatus, managerId = 
                       <Eye size={18} />
                       View
                     </motion.button>
+                    {booking.status === 'completed' && onDeleteBooking && (
+                      <DeleteBookingButton
+                        bookingId={booking.id}
+                        bookingDetails={{
+                          customerName: booking.customerName,
+                          eventType: booking.eventType,
+                          eventDate: booking.eventDate,
+                        }}
+                        onDeleted={() => onDeleteBooking(booking.id)}
+                      />
+                    )}
                   </div>
                 </div>
               </div>

@@ -162,6 +162,63 @@ export default function ManagerDashboard() {
             <p className="text-gray-600 mt-2">Welcome, {managerData?.displayName}</p>
           </motion.div>
 
+          {/* Upcoming Events Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Upcoming Events</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {bookings
+                .filter(b => b.status === 'confirmed' && new Date(b.eventDate) >= new Date())
+                .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
+                .slice(0, 6)
+                .map((booking) => (
+                  <motion.div
+                    key={booking.id}
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => router.push(`/owner/upcoming-events/${booking.id}`)}
+                    className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border-2 border-green-200 shadow-lg cursor-pointer hover:shadow-xl transition-all"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-bold text-gray-900">{booking.customerName}</h3>
+                        <p className="text-sm text-gray-600">{booking.eventType}</p>
+                      </div>
+                      <span className="px-2 py-1 bg-green-600 text-white text-xs rounded-full font-semibold">
+                        {format(new Date(booking.eventDate), 'MMM dd')}
+                      </span>
+                    </div>
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <p className="flex items-center gap-2">
+                        <Calendar size={14} className="text-green-600" />
+                        {format(new Date(booking.eventDate), 'MMMM dd, yyyy')}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Clock size={14} className="text-green-600" />
+                        {booking.eventTime}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Users size={14} className="text-green-600" />
+                        {booking.guestCount} guests
+                      </p>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <p className="text-xs text-green-700 font-semibold">Click to view full details →</p>
+                    </div>
+                  </motion.div>
+                ))}
+              {bookings.filter(b => b.status === 'confirmed' && new Date(b.eventDate) >= new Date()).length === 0 && (
+                <div className="col-span-full bg-white rounded-xl p-8 text-center border-2 border-dashed border-gray-300">
+                  <Calendar size={48} className="text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600 font-semibold">No upcoming events</p>
+                  <p className="text-gray-500 text-sm mt-1">Confirmed bookings will appear here</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+
           {/* Bookings Management */}
           <ManagerBookings 
             bookings={bookings} 
@@ -188,6 +245,9 @@ export default function ManagerDashboard() {
                 }
               };
               fetchBookings();
+            }}
+            onDeleteBooking={(bookingId) => {
+              setBookings(bookings.filter(b => b.id !== bookingId));
             }}
           />
         </div>

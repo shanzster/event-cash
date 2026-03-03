@@ -11,10 +11,10 @@ import {
   Check, Sparkles, Info, Phone, Mail, User as UserIcon,
   UtensilsCrossed, Armchair, Table2, Plus, Minus, ShoppingCart
 } from 'lucide-react';
-import { packages as staticPackages, eventTypes, serviceTypes, additionalFoodItems, additionalServices } from '@/lib/packages';
+import { packages as staticPackages, eventTypes, serviceTypes } from '@/lib/packages';
 import { Package } from '@/types/booking';
 import dynamic from 'next/dynamic';
-import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { isDateClosed } from '@/lib/closedDays';
 import { format } from 'date-fns';
@@ -31,6 +31,20 @@ export default function NewBooking() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [packages, setPackages] = useState<Package[]>([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
+  const [addOns, setAddOns] = useState<any[]>([]);
+  const [loadingAddOns, setLoadingAddOns] = useState(true);
+  const [editingAddonId, setEditingAddonId] = useState<string | null>(null);
+  const [editingPrice, setEditingPrice] = useState<string>('');
+
+  // Convert 24-hour time to 12-hour format
+  const formatTimeTo12Hour = (time: string) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
 
   // Fetch packages from Firestore
   useEffect(() => {
@@ -55,16 +69,68 @@ export default function NewBooking() {
     fetchPackages();
   }, []);
 
-  // Convert 24-hour time to 12-hour format
-  const formatTimeTo12Hour = (time: string) => {
-    if (!time) return '';
-    const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours, 10);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
+  // Fetch add-ons from Firestore
+  useEffect(() => {
+    const fetchAddOns = async () => {
+      try {
+        const addOnsRef = collection(db, 'addOns');
+        const snapshot = await getDocs(addOnsRef);
+        
+        const addOnsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setAddOns(addOnsData.filter((addon: any) => addon.available));
+      } catch (error) {
+        console.error('Error fetching add-ons:', error);
+      } finally {
+        setLoadingAddOns(false);
+      }
+    };
+
+    fetchAddOns();
+  }, []);
+
+  // Handle inline price editing
+  const startEditingPrice = (addonId: string, currentPrice: number) => {
+    setEditingAddonId(addonId);
+    setEditingPrice(currentPrice.toString());
   };
-  
+
+  const saveAddonPrice = async (addonId: string) => {
+    const newPrice = parseFloat(editingPrice);
+    if (isNaN(newPrice) || newPrice < 0) {
+      alert('Please enter a valid price');
+      return;
+    }
+
+    try {
+      const addonRef = doc(db, 'addOns', addonId);
+      await updateDoc(addonRef, {
+        price: newPrice,
+        updatedAt: new Date(),
+      });
+
+      // Update local state
+      setAddOns(prev => prev.map(addon => 
+        addon.id === addonId ? { ...addon, price: newPrice } : addon
+      ));
+
+      setEditingAddonId(null);
+      setEditingPrice('');
+      alert('Price updated successfully!');
+    } catch (error) {
+      console.error('Error updating price:', error);
+      alert('Failed to update price');
+    }
+  };
+
+  const cancelEditingPrice = () => {
+    setEditingAddonId(null);
+    setEditingPrice('');
+  };
+
   const [formData, setFormData] = useState({
     customerName: '',
     customerEmail: '',
@@ -164,14 +230,15 @@ export default function NewBooking() {
     const selectedServiceType = serviceTypes.find(st => st.id === formData.serviceType);
     const servicePrice = selectedServiceType ? selectedServiceType.pricePerGuest * guestCount : 0;
     
+    // Use fetched add-ons from Firestore instead of static data
     const foodAddonsPrice = formData.additionalFood.reduce((total, foodId) => {
-      const item = additionalFoodItems.find(f => f.id === foodId);
+      const item = addOns.find(a => a.id === foodId && a.category === 'food');
       return total + (item?.price || 0);
     }, 0);
     
     const servicesAddonsPrice = formData.additionalServices.reduce((total, service) => {
-      const item = additionalServices.find(s => s.id === service.id);
-      return total + (item?.pricePerUnit || 0) * service.quantity;
+      const item = addOns.find(a => a.id === service.id);
+      return total + (item?.price || 0) * service.quantity;
     }, 0);
     
     const totalPrice = basePrice + servicePrice + foodAddonsPrice + servicesAddonsPrice;
@@ -639,41 +706,82 @@ export default function NewBooking() {
                       </div>
 
                       <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                        {['appetizers', 'stations', 'desserts', 'beverages'].map((category) => (
-                          <div key={category}>
-                            <h4 className="text-sm font-bold text-primary uppercase mb-2 mt-4 first:mt-0">
-                              {category}
-                            </h4>
-                            {additionalFoodItems.filter(item => item.category === category).map((item, idx) => (
-                              <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.05 * idx }}
-                                onClick={() => toggleFoodItem(item.id)}
-                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                                  formData.additionalFood.includes(item.id)
-                                    ? 'border-primary bg-primary/10 shadow-md'
-                                    : 'border-gray-200 hover:border-primary/50 bg-white'
-                                }`}>
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
-                                      formData.additionalFood.includes(item.id)
-                                        ? 'border-primary bg-primary'
-                                        : 'border-gray-300'
-                                    }`}>
-                                      {formData.additionalFood.includes(item.id) && (
-                                        <Check size={16} className="text-white" />
+                        {['food', 'appetizers', 'stations', 'desserts', 'beverages'].map((category) => {
+                          const categoryAddons = addOns.filter(addon => addon.category === category);
+                          if (categoryAddons.length === 0) return null;
+                          
+                          return (
+                            <div key={category}>
+                              <h4 className="text-sm font-bold text-primary uppercase mb-2 mt-4 first:mt-0">
+                                {category}
+                              </h4>
+                              {categoryAddons.map((item, idx) => (
+                                <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: 0.05 * idx }}
+                                  onClick={() => !editingAddonId && toggleFoodItem(item.id)}
+                                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                    formData.additionalFood.includes(item.id)
+                                      ? 'border-primary bg-primary/10 shadow-md'
+                                      : 'border-gray-200 hover:border-primary/50 bg-white'
+                                  }`}>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3 flex-1">
+                                      <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                                        formData.additionalFood.includes(item.id)
+                                          ? 'border-primary bg-primary'
+                                          : 'border-gray-300'
+                                      }`}>
+                                        {formData.additionalFood.includes(item.id) && (
+                                          <Check size={16} className="text-white" />
+                                        )}
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="font-bold text-gray-900">{item.name}</p>
+                                        {item.description && (
+                                          <p className="text-xs text-gray-500">{item.description}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                      {editingAddonId === item.id ? (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-semibold text-gray-600">₱</span>
+                                          <input
+                                            type="number"
+                                            value={editingPrice}
+                                            onChange={(e) => setEditingPrice(e.target.value)}
+                                            className="w-24 px-2 py-1 border-2 border-primary rounded text-sm font-bold text-primary text-right"
+                                            autoFocus
+                                          />
+                                          <button
+                                            onClick={() => saveAddonPrice(item.id)}
+                                            className="px-2 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700"
+                                          >
+                                            Save
+                                          </button>
+                                          <button
+                                            onClick={cancelEditingPrice}
+                                            className="px-2 py-1 bg-gray-400 text-white rounded text-xs font-semibold hover:bg-gray-500"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div
+                                          onClick={() => startEditingPrice(item.id, item.price)}
+                                          className="cursor-pointer hover:bg-primary/10 px-2 py-1 rounded transition-colors"
+                                        >
+                                          <p className="text-lg font-bold text-primary">₱{item.price.toLocaleString()}.00</p>
+                                          <p className="text-xs text-gray-500 text-right">Click to edit</p>
+                                        </div>
                                       )}
                                     </div>
-                                    <div>
-                                      <p className="font-bold text-gray-900">{item.name}</p>
-                                    </div>
                                   </div>
-                                  <p className="text-lg font-bold text-primary">₱{item.price}.00</p>
-                                </div>
-                              </motion.div>
-                            ))}
-                          </div>
-                        ))}
+                                </motion.div>
+                              ))}
+                            </div>
+                          );
+                        })}
                       </div>
 
                       <div className="mt-6 pt-6 border-t-2 border-primary/20">
@@ -700,7 +808,7 @@ export default function NewBooking() {
                       </div>
 
                       <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                        {additionalServices.map((service, idx) => {
+                        {addOns.filter(addon => addon.category === 'service' || addon.category === 'equipment').map((service, idx) => {
                           const quantity = formData.additionalServices.find(s => s.id === service.id)?.quantity || 0;
                           return (
                             <motion.div key={service.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
@@ -709,9 +817,44 @@ export default function NewBooking() {
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex-1">
                                   <p className="font-bold text-gray-900">{service.name}</p>
-                                  <p className="text-sm text-gray-600">₱{service.pricePerUnit}.00 per {service.unit}</p>
+                                  {service.description && (
+                                    <p className="text-sm text-gray-600">{service.description}</p>
+                                  )}
                                 </div>
-                                <p className="text-lg font-bold text-primary">₱{(service.pricePerUnit * quantity).toLocaleString()}.00</p>
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  {editingAddonId === service.id ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-semibold text-gray-600">₱</span>
+                                      <input
+                                        type="number"
+                                        value={editingPrice}
+                                        onChange={(e) => setEditingPrice(e.target.value)}
+                                        className="w-24 px-2 py-1 border-2 border-primary rounded text-sm font-bold text-primary text-right"
+                                        autoFocus
+                                      />
+                                      <button
+                                        onClick={() => saveAddonPrice(service.id)}
+                                        className="px-2 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700"
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        onClick={cancelEditingPrice}
+                                        className="px-2 py-1 bg-gray-400 text-white rounded text-xs font-semibold hover:bg-gray-500"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div
+                                      onClick={() => startEditingPrice(service.id, service.price)}
+                                      className="cursor-pointer hover:bg-primary/10 px-2 py-1 rounded transition-colors text-right"
+                                    >
+                                      <p className="text-lg font-bold text-primary">₱{(service.price * quantity).toLocaleString()}.00</p>
+                                      <p className="text-xs text-gray-500">₱{service.price.toLocaleString()}.00 each - Click to edit</p>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex items-center gap-3">
                               <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
@@ -851,7 +994,7 @@ export default function NewBooking() {
                           <div>
                             <p className="text-sm text-gray-600">Additional Food ({formData.additionalFood.length} items)</p>
                             <p className="font-bold text-gray-900 text-sm">
-                              {formData.additionalFood.map(id => additionalFoodItems.find(f => f.id === id)?.name).join(', ')}
+                              {formData.additionalFood.map(id => addOns.find(f => f.id === id)?.name).join(', ')}
                             </p>
                           </div>
                         </div>
@@ -863,7 +1006,7 @@ export default function NewBooking() {
                             <p className="text-sm text-gray-600">Additional Services</p>
                             <p className="font-bold text-gray-900 text-sm">
                               {formData.additionalServices.map(s => {
-                                const service = additionalServices.find(as => as.id === s.id);
+                                const service = addOns.find(as => as.id === s.id);
                                 return `${service?.name} (${s.quantity})`;
                               }).join(', ')}
                             </p>

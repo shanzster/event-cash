@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Save, Phone, Mail, MapPin, Clock, Facebook, Instagram, Twitter, Home, Award, Users, Heart } from 'lucide-react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { Save, Phone, Mail, MapPin, Clock, Facebook, Instagram, Twitter, Home, Award, Users, Heart, Plus, Edit2, Trash2, X, Upload } from 'lucide-react';
+import { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useManager } from '@/contexts/ManagerContext';
 import ManagerSidebar from '@/components/ManagerSidebar';
+import PackagesAddonsManager from '@/components/PackagesAddonsManager';
+import { Package } from 'lucide-react';
 
 interface ContactInfo {
   phone: string;
@@ -63,10 +65,25 @@ interface HomeContent {
   };
 }
 
+interface PackageData {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  features: string[];
+  imageUrl?: string;
+  gallery?: string[];
+  icon: string;
+  gradient: string;
+  createdAt: any;
+  updatedAt: any;
+}
+
 export default function CMSPage() {
   const router = useRouter();
   const { managerUser, isManager, loading: managerLoading } = useManager();
-  const [activeTab, setActiveTab] = useState<'contact' | 'content'>('content');
+  const [activeTab, setActiveTab] = useState<'contact' | 'content' | 'packages'>('content');
+  const [packagesSubTab, setPackagesSubTab] = useState<'packages' | 'addons'>('packages');
   
   const [contactInfo, setContactInfo] = useState<ContactInfo>({
     phone: '',
@@ -125,6 +142,29 @@ export default function CMSPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Package management state
+  const [packages, setPackages] = useState<PackageData[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(true);
+  const [showPackageModal, setShowPackageModal] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<PackageData | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  // Debug: Log packages state changes
+  useEffect(() => {
+    console.log('Packages state updated:', packages);
+  }, [packages]);
+  
+  const [packageFormData, setPackageFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    features: [''],
+    imageUrl: '',
+    gallery: [] as string[],
+    icon: 'Package',
+    gradient: 'from-primary to-yellow-600',
+  });
+
   useEffect(() => {
     if (!managerLoading && (!isManager || !managerUser)) {
       router.push('/owner/login');
@@ -134,8 +174,28 @@ export default function CMSPage() {
     if (isManager) {
       fetchContactInfo();
       fetchHomeContent();
+      fetchPackages();
     }
   }, [isManager, managerUser, managerLoading, router]);
+
+  const fetchPackages = async () => {
+    try {
+      const packagesRef = collection(db, 'packages');
+      const snapshot = await getDocs(packagesRef);
+      
+      const packagesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as PackageData[];
+      
+      console.log('Fetched packages:', packagesData); // Debug log
+      setPackages(packagesData.sort((a, b) => a.price - b.price));
+    } catch (error) {
+      console.error('Error fetching packages:', error);
+    } finally {
+      setLoadingPackages(false);
+    }
+  };
 
   const fetchContactInfo = async () => {
     try {
@@ -207,6 +267,192 @@ export default function CMSPage() {
     }
   };
 
+  // Package management functions
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('upload_preset', 'minima');
+      formDataUpload.append('cloud_name', 'do8pgc1ja');
+
+      const response = await fetch(
+        'https://api.cloudinary.com/v1_1/do8pgc1ja/image/upload',
+        {
+          method: 'POST',
+          body: formDataUpload,
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.secure_url) {
+        setPackageFormData(prev => ({ 
+          ...prev, 
+          gallery: [...prev.gallery, data.secure_url],
+          imageUrl: prev.gallery.length === 0 ? data.secure_url : prev.imageUrl
+        }));
+        alert('Image uploaded successfully!');
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setPackageFormData(prev => {
+      const newGallery = prev.gallery.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        gallery: newGallery,
+        imageUrl: newGallery.length > 0 ? newGallery[0] : ''
+      };
+    });
+  };
+
+  const handleAddFeature = () => {
+    setPackageFormData(prev => ({
+      ...prev,
+      features: [...prev.features, '']
+    }));
+  };
+
+  const handleRemoveFeature = (index: number) => {
+    setPackageFormData(prev => ({
+      ...prev,
+      features: prev.features.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleFeatureChange = (index: number, value: string) => {
+    setPackageFormData(prev => ({
+      ...prev,
+      features: prev.features.map((f, i) => i === index ? value : f)
+    }));
+  };
+
+  const handleSavePackage = async () => {
+    if (!packageFormData.name.trim()) {
+      alert('Please enter package name');
+      return;
+    }
+    if (!packageFormData.description.trim()) {
+      alert('Please enter package description');
+      return;
+    }
+    if (!packageFormData.price || parseFloat(packageFormData.price) <= 0) {
+      alert('Please enter a valid price');
+      return;
+    }
+    if (packageFormData.features.filter(f => f.trim()).length === 0) {
+      alert('Please add at least one feature');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const packageData = {
+        name: packageFormData.name.trim(),
+        description: packageFormData.description.trim(),
+        price: parseFloat(packageFormData.price),
+        features: packageFormData.features.filter(f => f.trim()),
+        imageUrl: packageFormData.gallery.length > 0 ? packageFormData.gallery[0] : '',
+        gallery: packageFormData.gallery,
+        icon: packageFormData.icon,
+        gradient: packageFormData.gradient,
+        updatedAt: new Date(),
+      };
+
+      if (editingPackage) {
+        await updateDoc(doc(db, 'packages', editingPackage.id), packageData);
+        alert('Package updated successfully!');
+      } else {
+        await addDoc(collection(db, 'packages'), {
+          ...packageData,
+          createdAt: new Date(),
+        });
+        alert('Package created successfully!');
+      }
+
+      setShowPackageModal(false);
+      setEditingPackage(null);
+      resetPackageForm();
+      fetchPackages();
+    } catch (error) {
+      console.error('Error saving package:', error);
+      alert('Failed to save package. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditPackage = (pkg: PackageData) => {
+    setEditingPackage(pkg);
+    setPackageFormData({
+      name: pkg.name,
+      description: pkg.description,
+      price: pkg.price.toString(),
+      features: pkg.features,
+      imageUrl: pkg.imageUrl || '',
+      gallery: pkg.gallery || (pkg.imageUrl ? [pkg.imageUrl] : []),
+      icon: pkg.icon,
+      gradient: pkg.gradient,
+    });
+    setShowPackageModal(true);
+  };
+
+  const handleDeletePackage = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this package?')) return;
+
+    try {
+      await deleteDoc(doc(db, 'packages', id));
+      alert('Package deleted successfully!');
+      fetchPackages();
+    } catch (error) {
+      console.error('Error deleting package:', error);
+      alert('Failed to delete package. Please try again.');
+    }
+  };
+
+  const resetPackageForm = () => {
+    setPackageFormData({
+      name: '',
+      description: '',
+      price: '',
+      features: [''],
+      imageUrl: '',
+      gallery: [],
+      icon: 'Package',
+      gradient: 'from-primary to-yellow-600',
+    });
+  };
+
+  const openAddPackageModal = () => {
+    resetPackageForm();
+    setEditingPackage(null);
+    setShowPackageModal(true);
+  };
+
   if (managerLoading || loading) {
     return (
       <ManagerSidebar>
@@ -259,6 +505,17 @@ export default function CMSPage() {
               >
                 <Home className="inline mr-2" size={20} />
                 Homepage Content
+              </button>
+              <button
+                onClick={() => setActiveTab('packages')}
+                className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                  activeTab === 'packages'
+                    ? 'bg-gradient-to-r from-primary to-yellow-600 text-white shadow-lg'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Package className="inline mr-2" size={20} />
+                Packages & Add-ons
               </button>
               <button
                 onClick={() => setActiveTab('contact')}
@@ -883,26 +1140,397 @@ export default function CMSPage() {
           </div>
           )}
 
-          {/* Save Button (Bottom) */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="mt-8 flex justify-end"
-          >
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={activeTab === 'contact' ? handleSaveContact : handleSaveContent}
-              disabled={saving}
-              className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold shadow-xl disabled:opacity-50"
+          {/* Save Button (Bottom) - Only show for content and contact tabs */}
+          {activeTab !== 'packages' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="mt-8 flex justify-end"
             >
-              <Save size={24} />
-              {saving ? 'Saving...' : 'Save All Changes'}
-            </motion.button>
-          </motion.div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={activeTab === 'contact' ? handleSaveContact : handleSaveContent}
+                disabled={saving}
+                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold shadow-xl disabled:opacity-50"
+              >
+                <Save size={24} />
+                {saving ? 'Saving...' : 'Save All Changes'}
+              </motion.button>
+            </motion.div>
+          )}
+
+          {/* Packages & Add-ons Tab */}
+          {activeTab === 'packages' && (
+            <div className="space-y-6">
+              {/* Sub-tabs */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPackagesSubTab('packages')}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                    packagesSubTab === 'packages'
+                      ? 'bg-white text-primary border-2 border-primary shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Packages
+                </button>
+                <button
+                  onClick={() => setPackagesSubTab('addons')}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                    packagesSubTab === 'addons'
+                      ? 'bg-white text-primary border-2 border-primary shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Add-ons
+                </button>
+              </div>
+
+              {/* Packages Section */}
+              {packagesSubTab === 'packages' && (
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">Packages Management</h2>
+                      <p className="text-gray-600 mt-1">Create and manage your catering packages</p>
+                      <p className="text-xs text-gray-500 mt-1">Debug: {packages.length} packages loaded, loading: {loadingPackages.toString()}</p>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={openAddPackageModal}
+                      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-lg font-semibold shadow-lg"
+                    >
+                      <Plus size={20} />
+                      Add Package
+                    </motion.button>
+                  </div>
+
+                  {loadingPackages ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-primary"></div>
+                      <p className="text-gray-600 mt-4">Loading packages...</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {packages.length === 0 ? (
+                        <div className="col-span-full bg-white rounded-xl shadow-lg p-12 text-center">
+                          <Package size={48} className="text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-600 font-semibold">No packages yet</p>
+                          <p className="text-gray-500 text-sm mt-2">Click "Add Package" to create your first package</p>
+                        </div>
+                      ) : (
+                        packages.map((pkg) => (
+                          <motion.div
+                            key={pkg.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all"
+                          >
+                            {(pkg.gallery && pkg.gallery.length > 0) ? (
+                              <div className="h-48 overflow-hidden relative">
+                                <img
+                                  src={pkg.gallery[0]}
+                                  alt={pkg.name}
+                                  className="w-full h-full object-cover"
+                                />
+                                {pkg.gallery.length > 1 && (
+                                  <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                    +{pkg.gallery.length - 1} more
+                                  </div>
+                                )}
+                              </div>
+                            ) : pkg.imageUrl ? (
+                              <div className="h-48 overflow-hidden">
+                                <img
+                                  src={pkg.imageUrl}
+                                  alt={pkg.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className={`h-48 bg-gradient-to-br ${pkg.gradient} flex items-center justify-center`}>
+                                <Package size={64} className="text-white" />
+                              </div>
+                            )}
+
+                            <div className="p-6">
+                              <h3 className="text-2xl font-bold text-gray-900 mb-2">{pkg.name}</h3>
+                              <p className="text-gray-600 text-sm mb-4">{pkg.description}</p>
+                              
+                              <div className="mb-4">
+                                <p className="text-3xl font-bold text-primary">₱{pkg.price.toLocaleString()}.00</p>
+                              </div>
+
+                              <div className="space-y-2 mb-4">
+                                {pkg.features.map((feature, index) => (
+                                  <div key={index} className="flex items-center gap-2 text-sm text-gray-700">
+                                    <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                                    <span>{feature}</span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="flex gap-2">
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => handleEditPackage(pkg)}
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                                >
+                                  <Edit2 size={16} />
+                                  Edit
+                                </motion.button>
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => handleDeletePackage(pkg.id)}
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                                >
+                                  <Trash2 size={16} />
+                                  Delete
+                                </motion.button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Add-ons Section */}
+              {packagesSubTab === 'addons' && (
+                <PackagesAddonsManager />
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Add/Edit Package Modal */}
+      {showPackageModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 my-8"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">
+                {editingPackage ? 'Edit Package' : 'Add New Package'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowPackageModal(false);
+                  setEditingPackage(null);
+                  resetPackageForm();
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Package Name <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={packageFormData.name}
+                  onChange={(e) => setPackageFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
+                  placeholder="e.g., Grand Celebration"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Description <span className="text-red-600">*</span>
+                </label>
+                <textarea
+                  value={packageFormData.description}
+                  onChange={(e) => setPackageFormData(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
+                  placeholder="Brief description of the package"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Price (₱) <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={packageFormData.price}
+                  onChange={(e) => setPackageFormData(prev => ({ ...prev, price: e.target.value }))}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Package Images (Unlimited)
+                </label>
+                
+                {packageFormData.gallery.length > 0 && (
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {packageFormData.gallery.map((imageUrl, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={imageUrl}
+                          alt={`Package image ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                        <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                          {index === 0 ? 'Main' : `#${index + 1}`}
+                        </div>
+                        <button
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="image-upload"
+                    disabled={uploading}
+                  />
+                  <label
+                    htmlFor="image-upload"
+                    className="cursor-pointer flex flex-col items-center"
+                  >
+                    {uploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-primary mb-4"></div>
+                        <p className="text-gray-600">Uploading...</p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={48} className="text-gray-400 mb-4" />
+                        <p className="text-gray-600 font-semibold">
+                          {packageFormData.gallery.length === 0 ? 'Click to upload first image' : 'Click to add more images'}
+                        </p>
+                        <p className="text-gray-500 text-sm mt-2">PNG, JPG up to 5MB each</p>
+                        {packageFormData.gallery.length > 0 && (
+                          <p className="text-primary text-sm mt-1 font-semibold">
+                            {packageFormData.gallery.length} image{packageFormData.gallery.length !== 1 ? 's' : ''} uploaded
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Features <span className="text-red-600">*</span>
+                </label>
+                <div className="space-y-2">
+                  {packageFormData.features.map((feature, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={feature}
+                        onChange={(e) => handleFeatureChange(index, e.target.value)}
+                        className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
+                        placeholder={`Feature ${index + 1}`}
+                      />
+                      {packageFormData.features.length > 1 && (
+                        <button
+                          onClick={() => handleRemoveFeature(index)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={handleAddFeature}
+                  className="mt-2 text-primary hover:text-yellow-600 font-semibold text-sm flex items-center gap-1"
+                >
+                  <Plus size={16} />
+                  Add Feature
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Color Gradient (if no image)
+                </label>
+                <select
+                  value={packageFormData.gradient}
+                  onChange={(e) => setPackageFormData(prev => ({ ...prev, gradient: e.target.value }))}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
+                >
+                  <option value="from-primary to-yellow-600">EventCash (Orange to Gold)</option>
+                  <option value="from-blue-500 to-purple-600">Blue to Purple</option>
+                  <option value="from-green-500 to-teal-600">Green to Teal</option>
+                  <option value="from-orange-500 to-red-600">Orange to Red</option>
+                  <option value="from-pink-500 to-purple-600">Pink to Purple</option>
+                  <option value="from-yellow-500 to-orange-600">Yellow to Orange</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6 pt-6 border-t">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setShowPackageModal(false);
+                  setEditingPackage(null);
+                  resetPackageForm();
+                }}
+                className="flex-1 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                disabled={saving}
+              >
+                Cancel
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleSavePackage}
+                disabled={saving || uploading}
+                className="flex-1 py-3 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save size={20} />
+                    {editingPackage ? 'Update Package' : 'Create Package'}
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </ManagerSidebar>
   );
 }

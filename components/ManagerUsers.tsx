@@ -90,12 +90,12 @@ export default function ManagerUsers() {
     }
 
     try {
-      // If adding an owner/manager, create Firebase Auth account
-      if (formData.role === 'manager') {
-        // Create Firebase Auth account
-        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        const user = userCredential.user;
+      // Create Firebase Auth account for ALL users (manager, staff, customer)
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = userCredential.user;
 
+      // If adding an owner/manager, create in managers collection
+      if (formData.role === 'manager') {
         // Create manager document in 'managers' collection with UID as document ID
         const managerDocRef = doc(db, 'managers', user.uid);
         await setDoc(managerDocRef, {
@@ -111,38 +111,21 @@ export default function ManagerUsers() {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-
-        // Also create in users collection for reference
-        await addDoc(collection(db, 'users'), {
-          uid: user.uid,
-          displayName: formData.displayName,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zipCode: formData.zipCode,
-          role: 'manager',
-          createdAt: new Date(),
-        });
-
-        // Note: We don't sign out the newly created user to avoid disrupting the current session
-        // The newly created owner can login separately at /owner/login
-      } else {
-        // For staff and customers, just create in users collection with password
-        await addDoc(collection(db, 'users'), {
-          displayName: formData.displayName,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zipCode: formData.zipCode,
-          role: formData.role,
-          password: formData.password,
-          createdAt: new Date(),
-        });
       }
+
+      // Create in users collection for ALL roles (for reference and management)
+      await addDoc(collection(db, 'users'), {
+        uid: user.uid,
+        displayName: formData.displayName,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        role: formData.role,
+        createdAt: new Date(),
+      });
 
       setFormData({
         displayName: '',
@@ -157,7 +140,9 @@ export default function ManagerUsers() {
       });
       setShowAddModal(false);
       fetchUsers();
-      alert(`${formData.role === 'manager' ? 'Owner' : 'User'} added successfully!${formData.role === 'manager' ? ' They can now login at /owner/login' : ''}`);
+      
+      const roleLabel = formData.role === 'manager' ? 'Owner' : formData.role === 'staff' ? 'Staff' : 'Customer';
+      alert(`${roleLabel} added successfully! Email: ${formData.email}, Password: ${formData.password}\n\nPlease save these credentials and share them with the user.`);
     } catch (error: any) {
       console.error('Error adding user:', error);
       if (error.code === 'auth/email-already-in-use') {

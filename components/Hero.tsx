@@ -87,22 +87,11 @@ export default function Hero() {
             whileTap={{ scale: 0.95 }}
           >
             <Link
-              href="/contact"
+              href="/login"
               className="inline-flex px-8 py-4 bg-gradient-to-r from-primary via-yellow-600 to-primary text-white rounded-xl font-semibold shadow-xl items-center justify-center gap-2 text-sm sm:text-base"
             >
               <ChefHat size={18} />
               Book Now
-            </Link>
-          </motion.div>
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Link
-              href="/services"
-              className="inline-flex px-8 py-4 backdrop-blur-xl bg-white/70 border-2 border-primary/30 rounded-xl font-semibold shadow-lg text-sm sm:text-base text-gray-900 items-center justify-center"
-            >
-              Explore Services
             </Link>
           </motion.div>
         </motion.div>

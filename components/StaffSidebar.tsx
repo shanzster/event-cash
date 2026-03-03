@@ -37,9 +37,9 @@ export default function StaffSidebar({ children }: StaffSidebarProps) {
     { icon: LayoutDashboard, label: 'Dashboard', path: '/staff/dashboard' },
     { icon: CalendarDays, label: 'Upcoming Events', path: '/staff/upcoming-events' },
     { icon: Calendar, label: 'Calendar', path: '/staff/calendar' },
+    { icon: TrendingUp, label: 'Client Transactions', path: '/staff/transactions' },
+    { icon: BookOpen, label: 'Accounting and Payments', path: '/staff/accounting' },
     { icon: BarChart3, label: 'Reports', path: '/staff/reports' },
-    { icon: TrendingUp, label: 'Transactions', path: '/staff/transactions' },
-    { icon: BookOpen, label: 'Accounting', path: '/staff/accounting' },
   ];
 
   const handleLogout = () => {

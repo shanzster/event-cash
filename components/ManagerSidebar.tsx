@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useManager } from '@/contexts/ManagerContext';
 import {
   LayoutDashboard,
-  Calendar,
+  Calendar as CalendarIcon,
   Users,
   LogOut,
   User,
@@ -21,7 +21,8 @@ import {
   Lock,
   BookOpen,
   Briefcase,
-  TrendingUp
+  TrendingUp,
+  CalendarDays
 } from 'lucide-react';
 import { useState as useStateFirebase } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -56,15 +57,13 @@ export default function ManagerSidebar({ children }: ManagerSidebarProps) {
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/owner/dashboard' },
     { icon: Package, label: 'Bookings', path: '/owner/bookings' },
-    { icon: Calendar, label: 'Upcoming Events', path: '/owner/upcoming-events' },
-    { icon: Users, label: 'Clients', path: '/owner/users' },
-    { icon: Briefcase, label: 'Financial Staff', path: '/owner/staff' },
-    { icon: Sparkles, label: 'Packages', path: '/owner/packages' },
-    { icon: Calendar, label: 'Calendar', path: '/owner/calendar' },
-    { icon: BarChart3, label: 'Reports', path: '/owner/reports' },
-    { icon: TrendingUp, label: 'Transactions', path: '/owner/transactions' },
-    { icon: BookOpen, label: 'Accounting', path: '/owner/accounting' },
-    { icon: Settings, label: 'Website CMS', path: '/owner/cms' },
+    { icon: CalendarDays, label: 'Upcoming Events', path: '/owner/upcoming-events' },
+    { icon: CalendarIcon, label: 'Calendar', path: '/owner/calendar' },
+    { icon: TrendingUp, label: 'Client Transactions', path: '/owner/transactions' },
+    { icon: BookOpen, label: 'Accounting and Payments', path: '/owner/accounting' },
+    { icon: BarChart3, label: 'Financial Reports', path: '/owner/reports' },
+    { icon: Users, label: 'User Management', path: '/owner/users' },
+    { icon: Settings, label: 'Content Management', path: '/owner/cms' },
   ];
 
   const handleLogout = async () => {
