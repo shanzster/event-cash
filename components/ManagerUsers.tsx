@@ -22,6 +22,14 @@ export default function ManagerUsers() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [alertModal, setAlertModal] = useState<{ show: boolean; title: string; message: string; type: 'success' | 'error' }>({
+    show: false,
+    title: '',
+    message: '',
+    type: 'success'
+  });
   const [formData, setFormData] = useState({
     displayName: '',
     email: '',
@@ -43,6 +51,14 @@ export default function ManagerUsers() {
     const special = ['!', '@', '#', '$'][Math.floor(Math.random() * 4)];
     return `${adjective}${noun}${number}${special}`;
   }
+
+  const showAlert = (title: string, message: string, type: 'success' | 'error' = 'success') => {
+    setAlertModal({ show: true, title, message, type });
+  };
+
+  const closeAlert = () => {
+    setAlertModal({ show: false, title: '', message: '', type: 'success' });
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -85,7 +101,7 @@ export default function ManagerUsers() {
 
   const handleAddStaff = async () => {
     if (!formData.displayName || !formData.email || !formData.phone || !formData.address || !formData.city) {
-      alert('Please fill in all required fields');
+      showAlert('Missing Information', 'Please fill in all required fields', 'error');
       return;
     }
 
@@ -114,17 +130,23 @@ export default function ManagerUsers() {
       }
 
       // Create in users collection for ALL roles (for reference and management)
-      await addDoc(collection(db, 'users'), {
+      // Use UID as document ID for easy lookup
+      const userDocRef = doc(db, 'users', user.uid);
+      await setDoc(userDocRef, {
         uid: user.uid,
         displayName: formData.displayName,
+        fullName: formData.displayName, // Add fullName for compatibility
         email: formData.email,
         phone: formData.phone,
+        phoneNumber: formData.phone, // Add phoneNumber for compatibility
         address: formData.address,
         city: formData.city,
         state: formData.state,
         zipCode: formData.zipCode,
         role: formData.role,
-        createdAt: new Date(),
+        userRole: formData.role === 'manager' ? 'admin' : 'customer', // Add userRole for compatibility
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
       setFormData({
@@ -142,35 +164,39 @@ export default function ManagerUsers() {
       fetchUsers();
       
       const roleLabel = formData.role === 'manager' ? 'Owner' : formData.role === 'staff' ? 'Staff' : 'Customer';
-      alert(`${roleLabel} added successfully! Email: ${formData.email}, Password: ${formData.password}\n\nPlease save these credentials and share them with the user.`);
+      showAlert('User Created', `${roleLabel} added successfully!\n\nEmail: ${formData.email}\nPassword: ${formData.password}\n\nPlease save these credentials and share them with the user.`, 'success');
     } catch (error: any) {
       console.error('Error adding user:', error);
       if (error.code === 'auth/email-already-in-use') {
-        alert('This email is already registered');
+        showAlert('Email Already Exists', 'This email is already registered', 'error');
       } else {
-        alert('Failed to add user: ' + error.message);
+        showAlert('Error', 'Failed to add user: ' + error.message, 'error');
       }
     }
   };
 
   const handleEditStaff = async () => {
     if (!selectedUser || !formData.displayName || !formData.email || !formData.phone || !formData.address || !formData.city) {
-      alert('Please fill in all required fields');
+      showAlert('Missing Information', 'Please fill in all required fields', 'error');
       return;
     }
 
     try {
-      const userRef = doc(db, 'users', selectedUser.id);
+      // Use UID as document ID
+      const userRef = doc(db, 'users', selectedUser.uid);
       await updateDoc(userRef, {
         displayName: formData.displayName,
+        fullName: formData.displayName, // Add fullName for compatibility
         email: formData.email,
         phone: formData.phone,
+        phoneNumber: formData.phone, // Add phoneNumber for compatibility
         address: formData.address,
         city: formData.city,
         state: formData.state,
         zipCode: formData.zipCode,
         role: formData.role,
-        password: formData.password,
+        userRole: formData.role === 'manager' ? 'admin' : 'customer', // Add userRole for compatibility
+        updatedAt: serverTimestamp(),
       });
 
       setFormData({
@@ -187,23 +213,44 @@ export default function ManagerUsers() {
       setShowEditModal(false);
       setSelectedUser(null);
       fetchUsers();
-      alert('User updated successfully!');
+      showAlert('Success', 'User updated successfully!', 'success');
     } catch (error) {
       console.error('Error updating user:', error);
-      alert('Failed to update user');
+      showAlert('Error', 'Failed to update user', 'error');
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+  const confirmDeleteUser = (user: User) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
 
     try {
-      await deleteDoc(doc(db, 'users', userId));
+      // Delete from Firestore users collection
+      await deleteDoc(doc(db, 'users', userToDelete.uid));
+      
+      // If manager, also delete from managers collection
+      if (userToDelete.role === 'manager') {
+        try {
+          await deleteDoc(doc(db, 'managers', userToDelete.uid));
+        } catch (error) {
+          console.log('Manager document not found or already deleted');
+        }
+      }
+
+      // Note: Firebase Auth user deletion requires admin SDK or the user to be signed in
+      // For now, we'll just delete from Firestore. The auth account will remain but won't have access.
+      
+      setShowDeleteModal(false);
+      setUserToDelete(null);
       fetchUsers();
-      alert('User deleted successfully!');
+      showAlert('Success', 'User deleted successfully!', 'success');
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('Failed to delete user');
+      showAlert('Error', 'Failed to delete user. Please try again.', 'error');
     }
   };
 
@@ -354,7 +401,7 @@ export default function ManagerUsers() {
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        onClick={() => handleDeleteUser(user.id)}
+                        onClick={() => confirmDeleteUser(user)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete user"
                       >
@@ -682,6 +729,92 @@ export default function ManagerUsers() {
                   Update User
                 </motion.button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteModal && userToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowDeleteModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+            >
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Delete User</h3>
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to delete <span className="font-bold">{userToDelete.displayName}</span>? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteUser}
+                  className="flex-1 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Alert Modal */}
+      <AnimatePresence>
+        {alertModal.show && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={closeAlert}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                {alertModal.type === 'success' ? (
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                )}
+                <h3 className="text-2xl font-bold text-gray-900">{alertModal.title}</h3>
+              </div>
+              <p className="text-gray-700 mb-6 whitespace-pre-line">{alertModal.message}</p>
+              <button
+                onClick={closeAlert}
+                className="w-full py-3 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+              >
+                OK
+              </button>
             </motion.div>
           </motion.div>
         )}

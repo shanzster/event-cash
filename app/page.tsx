@@ -8,7 +8,6 @@ import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import Hero from '@/components/Hero';
 import PackagesSection from '@/components/PackagesSection';
-import EventTypesSection from '@/components/EventTypesSection';
 import ProcessSection from '@/components/ProcessSection';
 import TestimonialsSection from '@/components/TestimonialsSection';
 import StatsSection from '@/components/StatsSection';
@@ -63,9 +62,6 @@ export default function Home() {
 
         {/* Packages Section */}
         <PackagesSection />
-
-        {/* Event Types Section */}
-        <EventTypesSection />
 
         {/* Process Section */}
         <ProcessSection />

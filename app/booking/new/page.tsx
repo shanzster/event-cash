@@ -14,7 +14,7 @@ import {
 import { packages as staticPackages, eventTypes, serviceTypes } from '@/lib/packages';
 import { Package } from '@/types/booking';
 import dynamic from 'next/dynamic';
-import { collection, addDoc, serverTimestamp, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { isDateClosed } from '@/lib/closedDays';
 import { format } from 'date-fns';
@@ -157,11 +157,38 @@ export default function NewBooking() {
     if (!loading && !user) {
       router.push('/login');
     } else if (user) {
-      setFormData(prev => ({
-        ...prev,
-        customerName: user.displayName || '',
-        customerEmail: user.email || '',
-      }));
+      // Fetch user profile from Firestore to get phone number
+      const fetchUserProfile = async () => {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setFormData(prev => ({
+              ...prev,
+              customerName: userData.fullName || userData.displayName || user.displayName || '',
+              customerEmail: user.email || '',
+              customerPhone: userData.phoneNumber || userData.phone || '', // Check both field names
+            }));
+          } else {
+            // Fallback to auth data if no Firestore profile
+            setFormData(prev => ({
+              ...prev,
+              customerName: user.displayName || '',
+              customerEmail: user.email || '',
+            }));
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          // Fallback to auth data on error
+          setFormData(prev => ({
+            ...prev,
+            customerName: user.displayName || '',
+            customerEmail: user.email || '',
+          }));
+        }
+      };
+
+      fetchUserProfile();
     }
   }, [user, loading, router]);
 
