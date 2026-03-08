@@ -45,151 +45,327 @@ export default function BookingDetail() {
   const downloadInvoice = () => {
     if (!booking) return;
 
-    const doc = new jsPDF();
-    const primaryColor = [255, 165, 0];
-    const darkColor = [51, 51, 51];
-    const lightGray = [240, 240, 240];
-    
-    let yPos = 20;
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
 
-    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, 0, 210, 40, 'F');
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.setFont('times', 'bold');
-    doc.text('EventCash Catering', 105, 20, { align: 'center' });
-    
-    doc.setFontSize(10);
-    doc.setFont('times', 'normal');
-    doc.text('CUSTOMER COPY - UNOFFICIAL RECEIPT', 105, 28, { align: 'center' });
-    doc.text('info@eventcash.com | (123) 456-7890', 105, 35, { align: 'center' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - 2 * margin;
+      let yPosition = margin;
 
-    yPos = 50;
+      // EventCash brand colors - Orange/Gold gradient
+      const primaryOrange = [255, 165, 0];
+      const primaryGold = [212, 175, 55];
+      const darkGray = [51, 51, 51];
+      const lightGray = [245, 245, 245];
 
-    doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-    doc.rect(15, yPos, 180, 20, 'F');
-    
-    doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-    doc.setFontSize(11);
-    doc.setFont('times', 'bold');
-    doc.text('BOOKING DETAILS', 20, yPos + 7);
-    
-    doc.setFont('times', 'normal');
-    doc.setFontSize(9);
-    doc.text(`Booking ID: ${booking.id}`, 20, yPos + 13);
-    doc.text(`Date Booked: ${format(booking.createdAt, 'MMMM dd, yyyy')}`, 20, yPos + 17);
-    doc.text(`Status: ${booking.status.toUpperCase()}`, 130, yPos + 13);
+      // Header with gradient effect (orange to gold)
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(0, 0, pageWidth, 45, 'F');
+      
+      // Add a gold accent bar
+      doc.setFillColor(primaryGold[0], primaryGold[1], primaryGold[2]);
+      doc.rect(0, 40, pageWidth, 5, 'F');
 
-    yPos += 30;
+      // Company Logo/Name
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(32);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EventCash', margin, 25);
+      
+      // Subtitle
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Premium Catering Services', margin, 33);
 
-    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(15, yPos, 180, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
-    doc.setFont('times', 'bold');
-    doc.text('CUSTOMER INFORMATION', 20, yPos + 5.5);
-    
-    yPos += 12;
-    doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-    doc.setFont('times', 'normal');
-    doc.setFontSize(10);
-    doc.text(`Name: ${booking.customerName}`, 20, yPos);
-    yPos += 6;
-    doc.text(`Email: ${booking.customerEmail}`, 20, yPos);
-    yPos += 6;
-    doc.text(`Phone: ${booking.customerPhone}`, 20, yPos);
+      // Invoice title on the right
+      doc.setFontSize(28);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INVOICE', pageWidth - margin, 25, { align: 'right' });
 
-    yPos += 12;
+      yPosition = 55;
 
-    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(15, yPos, 180, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
-    doc.setFont('times', 'bold');
-    doc.text('EVENT INFORMATION', 20, yPos + 5.5);
-    
-    yPos += 12;
-    doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-    doc.setFont('times', 'normal');
-    doc.setFontSize(10);
-    doc.text(`Event Type: ${booking.eventType}`, 20, yPos);
-    yPos += 6;
-    doc.text(`Event Date: ${format(booking.eventDate, 'MMMM dd, yyyy')}`, 20, yPos);
-    yPos += 6;
-    doc.text(`Event Time: ${formatTimeTo12Hour(booking.eventTime)}`, 20, yPos);
-    yPos += 6;
-    doc.text(`Number of Guests: ${booking.guestCount}`, 20, yPos);
-    yPos += 6;
-    doc.text(`Package: ${booking.packageName}`, 20, yPos);
+      // Invoice info section with orange accent
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      doc.rect(margin, yPosition, contentWidth, 25, 'F');
+      
+      // Orange left border accent
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, 3, 25, 'F');
+      
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Invoice Details', margin + 8, yPosition + 7);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(`Invoice #: ${booking.id.substring(0, 12).toUpperCase()}`, margin + 8, yPosition + 13);
+      doc.text(`Issue Date: ${format(new Date(), 'MMMM dd, yyyy')}`, margin + 8, yPosition + 18);
+      
+      doc.text(`Event Date: ${format(booking.eventDate, 'MMMM dd, yyyy')}`, pageWidth - margin - 60, yPosition + 13);
+      
+      // Status badge
+      const statusColor = booking.status === 'completed' ? [34, 197, 94] : booking.status === 'confirmed' ? [59, 130, 246] : [234, 179, 8];
+      doc.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
+      doc.roundedRect(pageWidth - margin - 35, yPosition + 16, 35, 6, 2, 2, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text(booking.status.toUpperCase(), pageWidth - margin - 17.5, yPosition + 20, { align: 'center' });
 
-    yPos += 10;
+      yPosition += 35;
 
-    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(15, yPos, 180, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
-    doc.setFont('times', 'bold');
-    doc.text('PRICING BREAKDOWN', 20, yPos + 5.5);
-    
-    yPos += 12;
-    doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-    doc.setFont('times', 'normal');
-    doc.setFontSize(10);
-    
-    doc.text('Base Package Price:', 20, yPos);
-    doc.text(`Php ${booking.basePrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
-    yPos += 6;
-    doc.text('Food Add-ons:', 20, yPos);
-    doc.text(`Php ${booking.foodAddonsPrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
-    yPos += 6;
-    doc.text('Service Add-ons:', 20, yPos);
-    doc.text(`Php ${booking.servicesAddonsPrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
-    
-    yPos += 8;
-    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setLineWidth(0.5);
-    doc.line(20, yPos, 190, yPos);
-    
-    yPos += 7;
-    doc.setFont('times', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('ESTIMATED TOTAL:', 20, yPos);
-    doc.text(`Php ${booking.totalPrice.toLocaleString()}.00`, 170, yPos, { align: 'right' });
+      // Two-column layout for Customer and Event info
+      const columnWidth = (contentWidth - 10) / 2;
 
-    // Terms and Conditions Section
-    yPos += 15;
-    
-    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(15, yPos, 180, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
-    doc.setFont('times', 'bold');
-    doc.text('TERMS AND CONDITIONS', 20, yPos + 5.5);
-    
-    yPos += 12;
-    doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-    doc.setFontSize(9);
-    doc.setFont('times', 'normal');
-    
-    const terms = [
-      '1. Downpayment of 30% is required to secure the booking.',
-      '2. Final payment must be settled before or after the event.',
-      '3. No refunds for cancellations less than 7 days before the event.'
-    ];
-    
-    terms.forEach((term) => {
-      const termLines = doc.splitTextToSize(term, 170);
-      doc.text(termLines, 20, yPos);
-      yPos += termLines.length * 5;
-    });
+      // Customer Information
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, columnWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CUSTOMER INFORMATION', margin + 5, yPosition + 5.5);
+      
+      yPosition += 12;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Name:', margin + 5, yPosition);
+      doc.setFont('helvetica', 'normal');
+      doc.text(booking.customerName, margin + 20, yPosition);
+      yPosition += 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Email:', margin + 5, yPosition);
+      doc.setFont('helvetica', 'normal');
+      doc.text(booking.customerEmail, margin + 20, yPosition);
+      yPosition += 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Phone:', margin + 5, yPosition);
+      doc.setFont('helvetica', 'normal');
+      doc.text(booking.customerPhone, margin + 20, yPosition);
 
-    const eventDateFormatted = format(booking.eventDate, 'MMMM_dd_yyyy');
-    const packageNameFormatted = booking.packageName.replace(/\s+/g, '');
-    const filename = `${eventDateFormatted}_Booking_${packageNameFormatted}.pdf`;
+      // Event Details (right column)
+      const eventYStart = yPosition - 22;
+      doc.setFillColor(primaryGold[0], primaryGold[1], primaryGold[2]);
+      doc.rect(margin + columnWidth + 10, eventYStart, columnWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EVENT DETAILS', margin + columnWidth + 15, eventYStart + 5.5);
+      
+      let eventY = eventYStart + 12;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Type:', margin + columnWidth + 15, eventY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(booking.eventType, margin + columnWidth + 30, eventY);
+      eventY += 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Package:', margin + columnWidth + 15, eventY);
+      doc.setFont('helvetica', 'normal');
+      const packageText = doc.splitTextToSize(booking.packageName, columnWidth - 20);
+      doc.text(packageText, margin + columnWidth + 30, eventY);
+      eventY += packageText.length * 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Guests:', margin + columnWidth + 15, eventY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(booking.guestCount || 'N/A'), margin + columnWidth + 30, eventY);
+      eventY += 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Time:', margin + columnWidth + 15, eventY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(formatTimeTo12Hour(booking.eventTime), margin + columnWidth + 30, eventY);
 
-    doc.save(filename);
+      yPosition += 10;
+
+      // Pricing Section
+      yPosition += 15;
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, contentWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PRICING BREAKDOWN', margin + 5, yPosition + 5.5);
+      
+      yPosition += 12;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+
+      // Pricing rows with alternating background
+      const pricingRows = [
+        { label: 'Base Package Price', value: booking.basePrice || 0 },
+        { label: 'Food Add-ons', value: booking.foodAddonsPrice || 0 },
+        { label: 'Service Add-ons', value: booking.servicesAddonsPrice || 0 },
+      ];
+
+      // Add price adjustment if it exists
+      if (booking.priceAdjustment && booking.priceAdjustment !== 0) {
+        pricingRows.push({
+          label: booking.priceAdjustment > 0 ? 'Price Adjustment (Additional)' : 'Price Adjustment (Discount)',
+          value: booking.priceAdjustment
+        });
+      }
+
+      pricingRows.forEach((row, index) => {
+        if (index % 2 === 0) {
+          doc.setFillColor(250, 250, 250);
+          doc.rect(margin, yPosition - 3, contentWidth, 7, 'F');
+        }
+        
+        // Reset to default color for label
+        doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+        doc.text(row.label, margin + 5, yPosition);
+        
+        const valueText = row.value < 0 
+          ? `-Php ${Math.abs(row.value).toLocaleString()}.00` 
+          : `Php ${row.value.toLocaleString()}.00`;
+        
+        // Color code adjustments
+        if (row.label.includes('Price Adjustment')) {
+          if (row.value > 0) {
+            doc.setTextColor(220, 38, 38); // Red for additional
+          } else {
+            doc.setTextColor(34, 197, 94); // Green for discount
+          }
+        } else {
+          doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]); // Reset to default
+        }
+        
+        doc.text(valueText, pageWidth - margin - 5, yPosition, { align: 'right' });
+        yPosition += 7;
+      });
+
+      // Total section with orange background
+      yPosition += 3;
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition - 3, contentWidth, 12, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(255, 255, 255);
+      const finalAmount = booking.finalPrice || booking.totalPrice || 0;
+      doc.text('TOTAL AMOUNT:', margin + 5, yPosition + 4);
+      doc.text(`Php ${finalAmount.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 4, { align: 'right' });
+
+      yPosition += 18;
+
+      // Payment Information (if available)
+      if (booking.downpayment || booking.remainingBalance) {
+        doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+        doc.rect(margin, yPosition, contentWidth, 20, 'F');
+        
+        doc.setFillColor(primaryGold[0], primaryGold[1], primaryGold[2]);
+        doc.rect(margin, yPosition, 3, 20, 'F');
+        
+        doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PAYMENT INFORMATION', margin + 8, yPosition + 7);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        const downPayment = booking.downpayment || 0;
+        const remainingBalance = finalAmount - downPayment;
+        
+        doc.text(`Down Payment:`, margin + 8, yPosition + 13);
+        doc.text(`Php ${downPayment.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 13, { align: 'right' });
+        
+        doc.text(`Remaining Balance:`, margin + 8, yPosition + 17);
+        doc.text(`Php ${remainingBalance.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 17, { align: 'right' });
+
+        yPosition += 25;
+      }
+
+      // Terms and Conditions Section
+      yPosition += 5;
+      
+      // Check if we need a new page
+      if (yPosition > pageHeight - 80) {
+        doc.addPage();
+        yPosition = margin;
+      }
+      
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, contentWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TERMS AND CONDITIONS', margin + 5, yPosition + 5.5);
+      
+      yPosition += 12;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      
+      const termsCustomer = [
+        '1. A downpayment of 50% is required to confirm your booking.',
+        '2. Remaining balance of 50% is due on or before the event date.',
+        '3. Cancellations made 30 days before the event will receive a 50% refund of the downpayment.',
+        '4. Cancellations made less than 30 days before the event are non-refundable.'
+      ];
+      
+      termsCustomer.forEach((term, index) => {
+        const termLines = doc.splitTextToSize(term, contentWidth - 10);
+        doc.text(termLines, margin + 5, yPosition);
+        yPosition += termLines.length * 5;
+      });
+
+      // Footer note
+      yPosition += 5;
+      doc.setFillColor(255, 248, 220);
+      doc.rect(margin, yPosition, contentWidth, 20, 'F');
+      
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, 3, 20, 'F');
+      
+      doc.setTextColor(139, 69, 19);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      const noteText = doc.splitTextToSize(
+        'Thank you for choosing EventCash Catering Services! This invoice serves as a record of your booking. For any inquiries or modifications, please contact us at info@eventcash.com or call (123) 456-7890.',
+        contentWidth - 15
+      );
+      doc.text(noteText, margin + 8, yPosition + 5);
+
+      // Footer with brand colors
+      yPosition = pageHeight - 20;
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(0, yPosition, pageWidth, 20, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EventCash Catering Services', pageWidth / 2, yPosition + 7, { align: 'center' });
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text('info@eventcash.com | (123) 456-7890', pageWidth / 2, yPosition + 12, { align: 'center' });
+      doc.text(`Generated on: ${format(new Date(), 'MMMM dd, yyyy hh:mm a')}`, pageWidth / 2, yPosition + 16, { align: 'center' });
+
+      // Save PDF
+      const fileName = `EventCash_Invoice_${booking.customerName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      console.error('Booking data:', booking);
+      alert('Failed to generate invoice PDF. Check console for details.');
+    }
   };
 
   useEffect(() => {
@@ -315,11 +491,34 @@ export default function BookingDetail() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Estimated Price</p>
-                      <p className="text-2xl font-bold text-primary flex items-center gap-1">
-                        <Check size={24} />
-                        ₱{booking.totalPrice.toLocaleString()}.00
+                      <p className="text-sm text-gray-600 mb-1">
+                        {booking.status === 'confirmed' && booking.finalPrice ? 'Final Price' : 'Estimated Price'}
                       </p>
+                      <div className="space-y-1">
+                        {booking.status === 'confirmed' && booking.finalPrice ? (
+                          <>
+                            {booking.finalPrice !== booking.totalPrice && (
+                              <p className="text-sm text-gray-500 line-through">
+                                ₱{booking.totalPrice.toLocaleString()}.00
+                              </p>
+                            )}
+                            <p className="text-2xl font-bold text-primary flex items-center gap-1">
+                              <Check size={24} />
+                              ₱{booking.finalPrice.toLocaleString()}.00
+                            </p>
+                            {booking.priceAdjustment && booking.priceAdjustment !== 0 && (
+                              <p className={`text-xs font-semibold ${booking.priceAdjustment > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                {booking.priceAdjustment > 0 ? '+' : ''}₱{booking.priceAdjustment.toLocaleString()}.00 adjustment
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-2xl font-bold text-primary flex items-center gap-1">
+                            <Check size={24} />
+                            ₱{booking.totalPrice.toLocaleString()}.00
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

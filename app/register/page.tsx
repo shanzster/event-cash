@@ -123,9 +123,9 @@ export default function Register() {
       setIsSuccess(true);
       setFormData({ fullName: '', email: '', phoneNumber: '', password: '', confirmPassword: '' });
 
-      // Redirect after 1.5 seconds (faster feedback)
+      // Redirect to dashboard after 1.5 seconds
       setTimeout(() => {
-        router.push('/');
+        router.push('/dashboard');
       }, 1500);
     } catch (err: any) {
       if (process.env.NODE_ENV === 'development') {
@@ -174,7 +174,7 @@ export default function Register() {
             </motion.div>
             <h1 className="text-3xl font-bold mb-4 text-gray-900">Registration Successful!</h1>
             <p className="text-gray-700 mb-8 font-medium">
-              Your account has been created. Redirecting to login page...
+              Your account has been created. Redirecting to your dashboard...
             </p>
           </motion.div>
         </main>

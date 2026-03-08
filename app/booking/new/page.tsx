@@ -14,7 +14,7 @@ import {
 import { packages as staticPackages, eventTypes, serviceTypes } from '@/lib/packages';
 import { Package } from '@/types/booking';
 import dynamic from 'next/dynamic';
-import { collection, addDoc, serverTimestamp, getDocs, updateDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { isDateClosed } from '@/lib/closedDays';
 import { format } from 'date-fns';
@@ -33,8 +33,6 @@ export default function NewBooking() {
   const [loadingPackages, setLoadingPackages] = useState(true);
   const [addOns, setAddOns] = useState<any[]>([]);
   const [loadingAddOns, setLoadingAddOns] = useState(true);
-  const [editingAddonId, setEditingAddonId] = useState<string | null>(null);
-  const [editingPrice, setEditingPrice] = useState<string>('');
 
   // Convert 24-hour time to 12-hour format
   const formatTimeTo12Hour = (time: string) => {
@@ -91,45 +89,6 @@ export default function NewBooking() {
 
     fetchAddOns();
   }, []);
-
-  // Handle inline price editing
-  const startEditingPrice = (addonId: string, currentPrice: number) => {
-    setEditingAddonId(addonId);
-    setEditingPrice(currentPrice.toString());
-  };
-
-  const saveAddonPrice = async (addonId: string) => {
-    const newPrice = parseFloat(editingPrice);
-    if (isNaN(newPrice) || newPrice < 0) {
-      alert('Please enter a valid price');
-      return;
-    }
-
-    try {
-      const addonRef = doc(db, 'addOns', addonId);
-      await updateDoc(addonRef, {
-        price: newPrice,
-        updatedAt: new Date(),
-      });
-
-      // Update local state
-      setAddOns(prev => prev.map(addon => 
-        addon.id === addonId ? { ...addon, price: newPrice } : addon
-      ));
-
-      setEditingAddonId(null);
-      setEditingPrice('');
-      alert('Price updated successfully!');
-    } catch (error) {
-      console.error('Error updating price:', error);
-      alert('Failed to update price');
-    }
-  };
-
-  const cancelEditingPrice = () => {
-    setEditingAddonId(null);
-    setEditingPrice('');
-  };
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -745,7 +704,7 @@ export default function NewBooking() {
                               {categoryAddons.map((item, idx) => (
                                 <motion.div key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
                                   transition={{ delay: 0.05 * idx }}
-                                  onClick={() => !editingAddonId && toggleFoodItem(item.id)}
+                                  onClick={() => toggleFoodItem(item.id)}
                                   className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                                     formData.additionalFood.includes(item.id)
                                       ? 'border-primary bg-primary/10 shadow-md'
@@ -769,39 +728,8 @@ export default function NewBooking() {
                                         )}
                                       </div>
                                     </div>
-                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                      {editingAddonId === item.id ? (
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm font-semibold text-gray-600">₱</span>
-                                          <input
-                                            type="number"
-                                            value={editingPrice}
-                                            onChange={(e) => setEditingPrice(e.target.value)}
-                                            className="w-24 px-2 py-1 border-2 border-primary rounded text-sm font-bold text-primary text-right"
-                                            autoFocus
-                                          />
-                                          <button
-                                            onClick={() => saveAddonPrice(item.id)}
-                                            className="px-2 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700"
-                                          >
-                                            Save
-                                          </button>
-                                          <button
-                                            onClick={cancelEditingPrice}
-                                            className="px-2 py-1 bg-gray-400 text-white rounded text-xs font-semibold hover:bg-gray-500"
-                                          >
-                                            Cancel
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <div
-                                          onClick={() => startEditingPrice(item.id, item.price)}
-                                          className="cursor-pointer hover:bg-primary/10 px-2 py-1 rounded transition-colors"
-                                        >
-                                          <p className="text-lg font-bold text-primary">₱{item.price.toLocaleString()}.00</p>
-                                          <p className="text-xs text-gray-500 text-right">Click to edit</p>
-                                        </div>
-                                      )}
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-lg font-bold text-primary">₱{item.price.toLocaleString()}.00</p>
                                     </div>
                                   </div>
                                 </motion.div>
@@ -848,39 +776,9 @@ export default function NewBooking() {
                                     <p className="text-sm text-gray-600">{service.description}</p>
                                   )}
                                 </div>
-                                <div onClick={(e) => e.stopPropagation()}>
-                                  {editingAddonId === service.id ? (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm font-semibold text-gray-600">₱</span>
-                                      <input
-                                        type="number"
-                                        value={editingPrice}
-                                        onChange={(e) => setEditingPrice(e.target.value)}
-                                        className="w-24 px-2 py-1 border-2 border-primary rounded text-sm font-bold text-primary text-right"
-                                        autoFocus
-                                      />
-                                      <button
-                                        onClick={() => saveAddonPrice(service.id)}
-                                        className="px-2 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700"
-                                      >
-                                        Save
-                                      </button>
-                                      <button
-                                        onClick={cancelEditingPrice}
-                                        className="px-2 py-1 bg-gray-400 text-white rounded text-xs font-semibold hover:bg-gray-500"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <div
-                                      onClick={() => startEditingPrice(service.id, service.price)}
-                                      className="cursor-pointer hover:bg-primary/10 px-2 py-1 rounded transition-colors text-right"
-                                    >
-                                      <p className="text-lg font-bold text-primary">₱{(service.price * quantity).toLocaleString()}.00</p>
-                                      <p className="text-xs text-gray-500">₱{service.price.toLocaleString()}.00 each - Click to edit</p>
-                                    </div>
-                                  )}
+                                <div>
+                                  <p className="text-lg font-bold text-primary">₱{(service.price * quantity).toLocaleString()}.00</p>
+                                  <p className="text-xs text-gray-500">₱{service.price.toLocaleString()}.00 each</p>
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">

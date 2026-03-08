@@ -46,34 +46,7 @@ interface ExpenseItem {
   date: Date;
 }
 
-interface BookingDetails {
-  id: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  eventDate: any;
-  eventTime: string;
-  eventType: string;
-  packageName: string;
-  status: string;
-  totalPrice: number;
-  finalPrice?: number;
-  location: {
-    address: string;
-  };
-  expenses?: ExpenseItem[];
-  priceNotes?: string;
-  guestCount?: number;
-  additionalFood?: string[];
-  additionalServices?: any[];
-  specialRequests?: string;
-  dietaryRestrictions?: string;
-  assignedStaff?: string[];
-  downpayment?: number;
-  discount?: number;
-  rescheduleFee?: number;
-  rescheduleHistory?: any[];
-}
+null
 
 export default function EventDetailPage() {
   const router = useRouter();
@@ -640,16 +613,39 @@ export default function EventDetailPage() {
         ...(booking.discount ? [{ label: 'Discount', value: -(booking.discount) }] : []),
       ];
 
+      // Add price adjustment if it exists
+      if (booking.priceAdjustment && booking.priceAdjustment !== 0) {
+        pricingRows.push({
+          label: booking.priceAdjustment > 0 ? 'Price Adjustment (Additional)' : 'Price Adjustment (Discount)',
+          value: booking.priceAdjustment
+        });
+      }
+
       pricingRows.forEach((row, index) => {
         if (index % 2 === 0) {
           doc.setFillColor(250, 250, 250);
           doc.rect(margin, yPosition - 3, contentWidth, 7, 'F');
         }
         
+        // Reset to default color for label
         doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
         doc.text(row.label, margin + 5, yPosition);
         
-        const valueText = row.value < 0 ? `-Php ${Math.abs(row.value).toLocaleString()}.00` : `Php ${row.value.toLocaleString()}.00`;
+        const valueText = row.value < 0 
+          ? `-Php ${Math.abs(row.value).toLocaleString()}.00` 
+          : `Php ${row.value.toLocaleString()}.00`;
+        
+        // Color code adjustments
+        if (row.label.includes('Price Adjustment')) {
+          if (row.value > 0) {
+            doc.setTextColor(220, 38, 38); // Red for additional
+          } else {
+            doc.setTextColor(34, 197, 94); // Green for discount
+          }
+        } else {
+          doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]); // Reset to default
+        }
+        
         doc.text(valueText, pageWidth - margin - 5, yPosition, { align: 'right' });
         yPosition += 7;
       });
@@ -749,9 +745,10 @@ export default function EventDetailPage() {
       doc.setFont('helvetica', 'normal');
       
       const terms = [
-        '1. Downpayment of 30% is required to secure the booking.',
-        '2. Final payment must be settled before or after the event.',
-        '3. No refunds for cancellations less than 7 days before the event.'
+        '1. A downpayment of 50% is required to confirm your booking.',
+        '2. Remaining balance of 50% is due on or before the event date.',
+        '3. Cancellations made 30 days before the event will receive a 50% refund of the downpayment.',
+        '4. Cancellations made less than 30 days before the event are non-refundable.'
       ];
       
       terms.forEach((term, index) => {
@@ -974,16 +971,39 @@ export default function EventDetailPage() {
         ...(booking.discount ? [{ label: 'Discount', value: -(booking.discount) }] : []),
       ];
 
+      // Add price adjustment if it exists
+      if (booking.priceAdjustment && booking.priceAdjustment !== 0) {
+        pricingRows.push({
+          label: booking.priceAdjustment > 0 ? 'Price Adjustment (Additional)' : 'Price Adjustment (Discount)',
+          value: booking.priceAdjustment
+        });
+      }
+
       pricingRows.forEach((row, index) => {
         if (index % 2 === 0) {
           doc.setFillColor(250, 250, 250);
           doc.rect(margin, yPosition - 3, contentWidth, 7, 'F');
         }
         
+        // Reset to default color for label
         doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
         doc.text(row.label, margin + 5, yPosition);
         
-        const valueText = row.value < 0 ? `-Php ${Math.abs(row.value).toLocaleString()}.00` : `Php ${row.value.toLocaleString()}.00`;
+        const valueText = row.value < 0 
+          ? `-Php ${Math.abs(row.value).toLocaleString()}.00` 
+          : `Php ${row.value.toLocaleString()}.00`;
+        
+        // Color code adjustments
+        if (row.label.includes('Price Adjustment')) {
+          if (row.value > 0) {
+            doc.setTextColor(220, 38, 38); // Red for additional
+          } else {
+            doc.setTextColor(34, 197, 94); // Green for discount
+          }
+        } else {
+          doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]); // Reset to default
+        }
+        
         doc.text(valueText, pageWidth - margin - 5, yPosition, { align: 'right' });
         yPosition += 7;
       });
@@ -1048,9 +1068,10 @@ export default function EventDetailPage() {
       doc.setFont('helvetica', 'normal');
       
       const termsCustomer = [
-        '1. Downpayment of 30% is required to secure the booking.',
-        '2. Final payment must be settled before or after the event.',
-        '3. No refunds for cancellations less than 7 days before the event.'
+        '1. A downpayment of 50% is required to confirm your booking.',
+        '2. Remaining balance of 50% is due on or before the event date.',
+        '3. Cancellations made 30 days before the event will receive a 50% refund of the downpayment.',
+        '4. Cancellations made less than 30 days before the event are non-refundable.'
       ];
       
       termsCustomer.forEach((term, index) => {

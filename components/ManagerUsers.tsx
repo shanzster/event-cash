@@ -733,7 +733,6 @@ export default function ManagerUsers() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
 
       {/* Delete Confirmation Modal */}
       <AnimatePresence>

@@ -149,7 +149,7 @@ export default function Dashboard() {
     },
     { 
       label: 'Total Spent', 
-      value: `₱${bookings.reduce((sum, b) => sum + b.totalPrice, 0).toLocaleString()}.00`, 
+      value: `₱${bookings.reduce((sum, b) => sum + (b.finalPrice || b.totalPrice), 0).toLocaleString()}.00`, 
       icon: TrendingUp, 
       color: 'from-primary to-yellow-600',
       bgColor: 'from-primary/10 to-yellow-600/10'
@@ -302,10 +302,27 @@ export default function Dashboard() {
                   {/* Price */}
                   <div className="bg-gradient-to-br from-primary/10 to-yellow-600/10 border-2 border-primary/20 rounded-xl p-4 mb-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-700 font-semibold">Estimated Price</span>
-                      <span className="text-2xl font-bold bg-gradient-to-r from-primary to-yellow-600 bg-clip-text text-transparent">
-                        ₱{booking.totalPrice.toLocaleString()}.00
+                      <span className="text-gray-700 font-semibold">
+                        {booking.status === 'confirmed' && booking.finalPrice ? 'Final Price' : 'Estimated Price'}
                       </span>
+                      <div className="text-right">
+                        {booking.status === 'confirmed' && booking.finalPrice ? (
+                          <>
+                            {booking.finalPrice !== booking.totalPrice && (
+                              <div className="text-sm text-gray-500 line-through mb-1">
+                                ₱{booking.totalPrice.toLocaleString()}.00
+                              </div>
+                            )}
+                            <div className="text-2xl font-bold bg-gradient-to-r from-primary to-yellow-600 bg-clip-text text-transparent">
+                              ₱{booking.finalPrice.toLocaleString()}.00
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-2xl font-bold bg-gradient-to-r from-primary to-yellow-600 bg-clip-text text-transparent">
+                            ₱{booking.totalPrice.toLocaleString()}.00
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 

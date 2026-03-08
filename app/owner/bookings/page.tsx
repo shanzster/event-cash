@@ -63,6 +63,8 @@ export default function ManagerDashboard() {
       if (additionalData) {
         if (newStatus === 'confirmed') {
           updateData.finalPrice = additionalData.finalPrice;
+          updateData.originalPrice = additionalData.originalPrice;
+          updateData.priceAdjustment = additionalData.priceAdjustment;
           updateData.downpayment = additionalData.downpayment || 0;
           updateData.remainingBalance = additionalData.remainingBalance || (additionalData.finalPrice - (additionalData.downpayment || 0));
           updateData.priceNotes = additionalData.priceNotes;
@@ -80,7 +82,7 @@ export default function ManagerDashboard() {
         b.id === bookingId ? { ...b, ...updateData } : b
       ));
       
-      console.log(`Booking ${bookingId} updated to ${newStatus}`);
+      console.log(`Booking ${bookingId} updated to ${newStatus}`, updateData);
     } catch (error) {
       console.error('Error updating booking status:', error);
       alert('Failed to update booking status');

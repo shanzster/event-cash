@@ -230,6 +230,20 @@ export default function OfficialReceipt({ booking, onClose }: OfficialReceiptPro
             <p className="text-gray-700 font-semibold">{booking.payment.remainingBalance.paymentMethod}</p>
           </div>
 
+          {/* Terms and Conditions */}
+          <div className="mb-8 p-6 bg-gray-50 rounded-lg">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Terms and Conditions</h3>
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li>• A downpayment of 50% was required to confirm this booking.</li>
+              <li>• The remaining balance of 50% has been paid in full.</li>
+              <li>• This receipt serves as proof of full payment for the catering services.</li>
+              <li>• All services and items listed have been agreed upon and confirmed.</li>
+              <li>• Any additional services or changes requested on the event day may incur extra charges.</li>
+              <li>• EventCash Catering is not liable for circumstances beyond our control (force majeure).</li>
+              <li>• This receipt is valid for tax and accounting purposes.</li>
+            </ul>
+          </div>
+
           {/* Thank You Note */}
           <div className="mb-8 p-8 bg-gradient-to-br from-primary/10 to-yellow-600/10 rounded-lg border-2 border-primary/30 text-center">
             <h3 className="text-2xl font-bold text-gray-900 mb-4">Thank You!</h3>

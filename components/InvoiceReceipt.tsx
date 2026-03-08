@@ -203,7 +203,7 @@ export default function InvoiceReceipt({ booking, onClose }: InvoiceReceiptProps
           <div className="mb-8 p-6 bg-gray-50 rounded-lg">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Terms and Conditions</h3>
             <ul className="space-y-2 text-sm text-gray-700">
-              <li>• Downpayment of 50% is required to confirm your booking.</li>
+              <li className="font-semibold text-primary">• A downpayment of 50% is required to confirm your booking.</li>
               <li>• Remaining balance of 50% is due on or before the event date.</li>
               <li>• Cancellations made 30 days before the event will receive a 50% refund of the downpayment.</li>
               <li>• Cancellations made less than 30 days before the event are non-refundable.</li>

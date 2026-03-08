@@ -27,6 +27,7 @@ interface BookingDetails {
   packageName: string;
   serviceTypeName: string;
   totalPrice: number;
+  finalPrice?: number;
   status: string;
   createdAt: Date;
 }
@@ -269,8 +270,25 @@ export default function MyBookings() {
                     {/* Right Column - Price & Actions */}
                     <div className="flex flex-col justify-between">
                       <div className="bg-gradient-to-br from-primary/10 to-yellow-600/10 rounded-2xl p-4 mb-4">
-                        <p className="text-sm text-gray-600 mb-1">Estimated Price</p>
-                        <p className="text-3xl font-bold text-primary">₱{booking.totalPrice.toLocaleString()}.00</p>
+                        <p className="text-sm text-gray-600 mb-1">
+                          {booking.status === 'confirmed' && booking.finalPrice ? 'Final Price' : 'Estimated Price'}
+                        </p>
+                        {booking.status === 'confirmed' && booking.finalPrice ? (
+                          <>
+                            {booking.finalPrice !== booking.totalPrice && (
+                              <p className="text-sm text-gray-500 line-through mb-1">
+                                ₱{booking.totalPrice.toLocaleString()}.00
+                              </p>
+                            )}
+                            <p className="text-3xl font-bold text-primary">
+                              ₱{booking.finalPrice.toLocaleString()}.00
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-3xl font-bold text-primary">
+                            ₱{booking.totalPrice.toLocaleString()}.00
+                          </p>
+                        )}
                       </div>
 
                       <button

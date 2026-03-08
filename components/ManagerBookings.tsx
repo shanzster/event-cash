@@ -28,7 +28,7 @@ interface Booking {
 
 interface ManagerBookingsProps {
   bookings: Booking[];
-  onUpdateStatus: (bookingId: string, newStatus: string) => void;
+  onUpdateStatus: (bookingId: string, newStatus: string, additionalData?: any) => void;
   managerId?: string;
   onBookingCreated?: () => void;
   onDeleteBooking?: (bookingId: string) => void;
@@ -140,7 +140,11 @@ export default function ManagerBookings({ bookings, onUpdateStatus, managerId = 
 
   const handleOpenConfirmModal = (booking: Booking) => {
     setSelectedBooking(booking);
-    setAdjustedPrice(booking.totalPrice?.toString() || '0');
+    const finalPrice = booking.totalPrice?.toString() || '0';
+    setAdjustedPrice(finalPrice);
+    // Auto-fill 50% downpayment
+    const fiftyPercent = (parseFloat(finalPrice) * 0.5).toFixed(2);
+    setDownpayment(fiftyPercent);
     setExpenses('0');
     setDiscount('0');
     setPriceNotes('');
@@ -156,18 +160,41 @@ export default function ManagerBookings({ bookings, onUpdateStatus, managerId = 
   const handleConfirmBooking = () => {
     if (!selectedBooking) return;
     
-    // Validate downpayment
+    // Validate inputs
     const finalPrice = parseFloat(adjustedPrice);
     const downpaymentAmount = parseFloat(downpayment);
     
+    if (!adjustedPrice || finalPrice <= 0) {
+      alert('Please enter a valid final price');
+      return;
+    }
+    
+    if (!downpayment || downpaymentAmount <= 0) {
+      alert('Please enter a downpayment amount');
+      return;
+    }
+    
+    // Validate downpayment is at least 50%
+    const minimumDownpayment = finalPrice * 0.5;
+    
+    if (downpaymentAmount < minimumDownpayment) {
+      alert(`Downpayment must be at least 50% of the final price (₱${minimumDownpayment.toLocaleString()}.00)`);
+      return;
+    }
+    
     if (downpaymentAmount > finalPrice) {
-      alert('Down payment cannot exceed final price');
+      alert('Downpayment cannot exceed final price');
       return;
     }
     
     // Update booking with final price and downpayment
+    const originalPrice = selectedBooking.totalPrice || 0;
+    const priceAdjustment = finalPrice - originalPrice;
+    
     onUpdateStatus(selectedBooking.id, 'confirmed', {
       finalPrice: finalPrice,
+      originalPrice: originalPrice,
+      priceAdjustment: priceAdjustment,
       downpayment: downpaymentAmount,
       remainingBalance: finalPrice - downpaymentAmount,
       priceNotes,
@@ -536,12 +563,18 @@ export default function ManagerBookings({ bookings, onUpdateStatus, managerId = 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Final Price
+                  Final Price <span className="text-red-600">*</span>
                 </label>
                 <input
                   type="number"
                   value={adjustedPrice}
-                  onChange={(e) => setAdjustedPrice(e.target.value)}
+                  onChange={(e) => {
+                    const newPrice = e.target.value;
+                    setAdjustedPrice(newPrice);
+                    // Auto-update downpayment to 50%
+                    const fiftyPercent = (parseFloat(newPrice || '0') * 0.5).toFixed(2);
+                    setDownpayment(fiftyPercent);
+                  }}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary transition-colors text-black font-semibold"
                   placeholder="Enter final price"
                 />
@@ -552,7 +585,8 @@ export default function ManagerBookings({ bookings, onUpdateStatus, managerId = 
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Down Payment Amount
+                  Down Payment Amount <span className="text-red-600">*</span>
+                  <span className="text-xs font-normal text-gray-500 ml-2">(Minimum 50% required)</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-3 text-gray-500 font-semibold">₱</span>
@@ -562,10 +596,12 @@ export default function ManagerBookings({ bookings, onUpdateStatus, managerId = 
                     onChange={(e) => setDownpayment(e.target.value)}
                     className="w-full pl-8 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary transition-colors text-black font-semibold"
                     placeholder="Enter down payment amount"
+                    min={parseFloat(adjustedPrice || '0') * 0.5}
                   />
                 </div>
                 <div className="text-xs text-gray-500 mt-2 space-y-1">
                   <p>Final Price: ₱{parseFloat(adjustedPrice || '0').toLocaleString()}.00</p>
+                  <p className="font-semibold text-orange-600">Minimum Required (50%): ₱{(parseFloat(adjustedPrice || '0') * 0.5).toLocaleString()}.00</p>
                   <p>Down Payment: {formatCurrency(parseFloat(downpayment || '0'))}</p>
                   <p className="font-semibold text-gray-700">Remaining Balance: ₱{(parseFloat(adjustedPrice || '0') - parseFloat(downpayment || '0')).toLocaleString()}.00</p>
                 </div>
