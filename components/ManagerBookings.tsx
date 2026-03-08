@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter, Eye, Check, X, Clock, Calendar, MapPin, User, Package, Printer, FileSpreadsheet, Plus, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
+import { useRouter } from 'next/navigation';
 import BookForClientModal from './BookForClientModal';
 import DeleteBookingButton from './DeleteBookingButton';
 import { formatCurrency } from '@/lib/currency';
@@ -35,6 +36,7 @@ interface ManagerBookingsProps {
 }
 
 export default function ManagerBookings({ bookings, onUpdateStatus, managerId = '', onBookingCreated, onDeleteBooking }: ManagerBookingsProps) {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -43,7 +45,6 @@ export default function ManagerBookings({ bookings, onUpdateStatus, managerId = 
   // Confirmation modals
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   
   // Price adjustment state
@@ -224,8 +225,7 @@ export default function ManagerBookings({ bookings, onUpdateStatus, managerId = 
   };
 
   const handleViewBooking = (booking: Booking) => {
-    setSelectedBooking(booking);
-    setShowViewModal(true);
+    router.push(`/owner/upcoming-events/${booking.id}`);
   };
 
 
@@ -723,232 +723,7 @@ export default function ManagerBookings({ bookings, onUpdateStatus, managerId = 
         </div>
       )}
 
-      {/* View Booking Modal */}
-      {showViewModal && selectedBooking && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl shadow-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">Booking Details</h3>
-              <button
-                onClick={() => setShowViewModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            {/* Status Badge */}
-            <div className="mb-6">
-              <span className={`px-4 py-2 rounded-full text-sm font-semibold border-2 ${getStatusColor(selectedBooking.status)}`}>
-                {selectedBooking.status.toUpperCase()}
-              </span>
-            </div>
-
-            {/* Customer Information */}
-            <div className="bg-blue-50 rounded-lg p-4 mb-6 border-l-4 border-blue-500">
-              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <User size={20} />
-                Customer Information
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-gray-600">Name</p>
-                  <p className="font-semibold text-black">{selectedBooking.customerName}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600">Email</p>
-                  <p className="font-semibold text-black">{selectedBooking.customerEmail}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Event Details */}
-            <div className="bg-purple-50 rounded-lg p-4 mb-6 border-l-4 border-purple-500">
-              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <Calendar size={20} />
-                Event Details
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-gray-600">Package</p>
-                  <p className="font-semibold text-black">{selectedBooking.packageName}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600">Event Type</p>
-                  <p className="font-semibold text-black">{selectedBooking.eventType || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600">Date</p>
-                  <p className="font-semibold text-black">
-                    {(() => {
-                      if (!selectedBooking.eventDate) return 'N/A';
-                      try {
-                        let date: Date;
-                        if (selectedBooking.eventDate.toDate) {
-                          date = selectedBooking.eventDate.toDate();
-                        } else if (typeof selectedBooking.eventDate === 'string') {
-                          date = new Date(selectedBooking.eventDate);
-                        } else {
-                          date = new Date(selectedBooking.eventDate);
-                        }
-                        return format(date, 'MMMM dd, yyyy (EEEE)');
-                      } catch (error) {
-                        return 'Invalid Date';
-                      }
-                    })()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600">Time</p>
-                  <p className="font-semibold text-black">{selectedBooking.eventTime}</p>
-                </div>
-                {selectedBooking.guestCount && (
-                  <div>
-                    <p className="text-xs text-gray-600">Number of Guests</p>
-                    <p className="font-semibold text-black">{selectedBooking.guestCount}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Location */}
-            <div className="bg-green-50 rounded-lg p-4 mb-6 border-l-4 border-green-500">
-              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <MapPin size={20} />
-                Location
-              </h4>
-              <p className="text-black font-semibold">{selectedBooking.location?.address}</p>
-              {selectedBooking.location?.city && (
-                <p className="text-black text-sm mt-1">{selectedBooking.location.city}</p>
-              )}
-            </div>
-
-            {/* Financial Details */}
-            <div className="bg-yellow-50 rounded-lg p-4 mb-6 border-l-4 border-yellow-500">
-              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <TrendingUp size={20} />
-                Financial Details
-              </h4>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Original Price:</span>
-                  <span className="font-semibold text-black">₱{selectedBooking.totalPrice?.toLocaleString() || '0'}.00</span>
-                </div>
-                {(selectedBooking as any).adjustedPrice && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Adjusted Price:</span>
-                    <span className="font-semibold text-black">₱{((selectedBooking as any).adjustedPrice).toLocaleString()}.00</span>
-                  </div>
-                )}
-                {(selectedBooking as any).discount && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Discount:</span>
-                    <span className="font-semibold text-black">-₱{((selectedBooking as any).discount).toLocaleString()}.00</span>
-                  </div>
-                )}
-                {(selectedBooking as any).expenses && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Expenses:</span>
-                    <span className="font-semibold text-black">₱{getExpenseAmount((selectedBooking as any).expenses).toLocaleString()}.00</span>
-                  </div>
-                )}
-                <div className="border-t-2 border-yellow-300 pt-2 mt-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-black">Final Amount:</span>
-                    <span className="font-bold text-xl text-black">
-                      ₱{(() => {
-                        const adjusted = (selectedBooking as any).adjustedPrice || selectedBooking.totalPrice || 0;
-                        const discount = (selectedBooking as any).discount || 0;
-                        return (adjusted - discount).toLocaleString();
-                      })()}.00
-                    </span>
-                  </div>
-                </div>
-                {(selectedBooking as any).expenses && (
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">Net Profit:</span>
-                    <span className="font-semibold text-black">
-                      ₱{(() => {
-                        const adjusted = (selectedBooking as any).adjustedPrice || selectedBooking.totalPrice || 0;
-                        const discount = (selectedBooking as any).discount || 0;
-                        const expenses = getExpenseAmount((selectedBooking as any).expenses);
-                        return (adjusted - discount - expenses).toLocaleString();
-                      })()}.00
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Price Notes */}
-            {(selectedBooking as any).priceNotes && (
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h4 className="font-bold text-gray-900 mb-2">Price Notes</h4>
-                <p className="text-black">{(selectedBooking as any).priceNotes}</p>
-              </div>
-            )}
-
-            {/* Rejection Reason */}
-            {selectedBooking.status === 'cancelled' && (selectedBooking as any).rejectionReason && (
-              <div className="bg-red-50 rounded-lg p-4 mb-6 border-l-4 border-red-500">
-                <h4 className="font-bold text-red-900 mb-2">Rejection Reason</h4>
-                <p className="text-black">{(selectedBooking as any).rejectionReason}</p>
-              </div>
-            )}
-
-            {/* Timestamps */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-bold text-gray-900 mb-3">Timeline</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Booking Created:</span>
-                  <span className="text-black font-semibold">
-                    {selectedBooking.createdAt
-                      ? (selectedBooking.createdAt.toDate 
-                        ? format(selectedBooking.createdAt.toDate(), 'MMM dd, yyyy hh:mm a')
-                        : format(new Date(selectedBooking.createdAt), 'MMM dd, yyyy hh:mm a'))
-                      : 'Pending'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Confirmed:</span>
-                  <span className={`font-semibold ${(selectedBooking as any).confirmedAt ? 'text-green-600' : 'text-gray-600'}`}>
-                    {(selectedBooking as any).confirmedAt
-                      ? ((selectedBooking as any).confirmedAt.toDate 
-                        ? format((selectedBooking as any).confirmedAt.toDate(), 'MMM dd, yyyy hh:mm a')
-                        : format(new Date((selectedBooking as any).confirmedAt), 'MMM dd, yyyy hh:mm a'))
-                      : 'Pending'}
-                  </span>
-                </div>
-                {(selectedBooking as any).cancelledAt && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Cancelled:</span>
-                    <span className="text-red-600 font-semibold">
-                      {(selectedBooking as any).cancelledAt.toDate 
-                        ? format((selectedBooking as any).cancelledAt.toDate(), 'MMM dd, yyyy hh:mm a')
-                        : format(new Date((selectedBooking as any).cancelledAt), 'MMM dd, yyyy hh:mm a')}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Close Button */}
-            <div className="mt-6">
-              <button
-                onClick={() => setShowViewModal(false)}
-                className="w-full py-3 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
-              >
-                Close
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      {/* View Booking Modal - REMOVED: Now navigates to /owner/upcoming-events/[id] page */}
 
       {/* Filter Modal */}
       {showFilterModal && (

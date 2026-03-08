@@ -304,6 +304,7 @@ export default function NewBooking() {
     return null;
   }
 
+  // Calculate pricing - this will update whenever formData, selectedPackage, or addOns change
   const pricing = calculatePricing();
   const stepVariants = {
     enter: (direction: number) => ({ x: direction > 0 ? 1000 : -1000, opacity: 0 }),

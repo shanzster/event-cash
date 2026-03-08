@@ -64,6 +64,10 @@ export default function BookingDetail() {
       const darkGray = [51, 51, 51];
       const lightGray = [245, 245, 245];
 
+      // Determine if this is a completed booking (fully paid)
+      const isCompleted = booking.status === 'completed';
+      const documentTitle = isCompleted ? 'OFFICIAL RECEIPT' : 'INVOICE';
+
       // Header with gradient effect (orange to gold)
       doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
       doc.rect(0, 0, pageWidth, 45, 'F');
@@ -83,14 +87,14 @@ export default function BookingDetail() {
       doc.setFont('helvetica', 'normal');
       doc.text('Premium Catering Services', margin, 33);
 
-      // Invoice title on the right
-      doc.setFontSize(28);
+      // Document title on the right (Invoice or Official Receipt)
+      doc.setFontSize(isCompleted ? 20 : 28);
       doc.setFont('helvetica', 'bold');
-      doc.text('INVOICE', pageWidth - margin, 25, { align: 'right' });
+      doc.text(documentTitle, pageWidth - margin, 25, { align: 'right' });
 
       yPosition = 55;
 
-      // Invoice info section with orange accent
+      // Invoice/Receipt info section with orange accent
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.rect(margin, yPosition, contentWidth, 25, 'F');
       
@@ -101,11 +105,11 @@ export default function BookingDetail() {
       doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('Invoice Details', margin + 8, yPosition + 7);
+      doc.text(isCompleted ? 'Receipt Details' : 'Invoice Details', margin + 8, yPosition + 7);
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.text(`Invoice #: ${booking.id.substring(0, 12).toUpperCase()}`, margin + 8, yPosition + 13);
+      doc.text(`${isCompleted ? 'Receipt' : 'Invoice'} #: ${booking.id.substring(0, 12).toUpperCase()}`, margin + 8, yPosition + 13);
       doc.text(`Issue Date: ${format(new Date(), 'MMMM dd, yyyy')}`, margin + 8, yPosition + 18);
       
       doc.text(`Event Date: ${format(booking.eventDate, 'MMMM dd, yyyy')}`, pageWidth - margin - 60, yPosition + 13);
@@ -118,6 +122,20 @@ export default function BookingDetail() {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.text(booking.status.toUpperCase(), pageWidth - margin - 17.5, yPosition + 20, { align: 'center' });
+
+      // Add "PAID IN FULL" stamp for completed bookings
+      if (isCompleted) {
+        yPosition += 30;
+        doc.setFillColor(34, 197, 94); // Green
+        doc.setDrawColor(22, 163, 74);
+        doc.setLineWidth(2);
+        doc.roundedRect(pageWidth - margin - 50, yPosition - 5, 50, 15, 3, 3, 'FD');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PAID IN FULL', pageWidth - margin - 25, yPosition + 4, { align: 'center' });
+        yPosition += 5;
+      }
 
       yPosition += 35;
 
@@ -265,13 +283,45 @@ export default function BookingDetail() {
 
       yPosition += 18;
 
-      // Payment Information (if available)
-      if (booking.downpayment || booking.remainingBalance) {
+      // Payment Information
+      if (isCompleted) {
+        // For completed bookings, show payment history
         doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-        doc.rect(margin, yPosition, contentWidth, 20, 'F');
+        doc.rect(margin, yPosition, contentWidth, 30, 'F');
         
         doc.setFillColor(primaryGold[0], primaryGold[1], primaryGold[2]);
-        doc.rect(margin, yPosition, 3, 20, 'F');
+        doc.rect(margin, yPosition, 3, 30, 'F');
+        
+        doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PAYMENT HISTORY', margin + 8, yPosition + 7);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        const downPayment = booking.downpayment || 0;
+        const finalPayment = booking.finalPayment || 0;
+        const totalPaid = downPayment + finalPayment;
+        
+        doc.text(`Down Payment (50%):`, margin + 8, yPosition + 14);
+        doc.text(`Php ${downPayment.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 14, { align: 'right' });
+        
+        doc.text(`Final Payment (50%):`, margin + 8, yPosition + 19);
+        doc.text(`Php ${finalPayment.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 19, { align: 'right' });
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Total Paid:`, margin + 8, yPosition + 25);
+        doc.setTextColor(34, 197, 94); // Green
+        doc.text(`Php ${totalPaid.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 25, { align: 'right' });
+
+        yPosition += 35;
+      } else {
+        // For pending/confirmed bookings, show payment info with remaining balance
+        doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+        doc.rect(margin, yPosition, contentWidth, 25, 'F');
+        
+        doc.setFillColor(primaryGold[0], primaryGold[1], primaryGold[2]);
+        doc.rect(margin, yPosition, 3, 25, 'F');
         
         doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
         doc.setFontSize(10);
@@ -286,10 +336,11 @@ export default function BookingDetail() {
         doc.text(`Down Payment:`, margin + 8, yPosition + 13);
         doc.text(`Php ${downPayment.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 13, { align: 'right' });
         
-        doc.text(`Remaining Balance:`, margin + 8, yPosition + 17);
-        doc.text(`Php ${remainingBalance.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 17, { align: 'right' });
+        doc.text(`Remaining Balance:`, margin + 8, yPosition + 18);
+        doc.setTextColor(220, 38, 38); // Red for remaining balance
+        doc.text(`Php ${remainingBalance.toLocaleString()}.00`, pageWidth - margin - 5, yPosition + 18, { align: 'right' });
 
-        yPosition += 25;
+        yPosition += 30;
       }
 
       // Terms and Conditions Section
@@ -313,7 +364,13 @@ export default function BookingDetail() {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       
-      const termsCustomer = [
+      // Different terms for completed vs pending/confirmed bookings
+      const termsCustomer = isCompleted ? [
+        '1. Payment has been received in full for this event.',
+        '2. This official receipt serves as proof of complete payment.',
+        '3. Thank you for choosing EventCash Catering Services.',
+        '4. For any inquiries, please contact us with your receipt number.'
+      ] : [
         '1. A downpayment of 50% is required to confirm your booking.',
         '2. Remaining balance of 50% is due on or before the event date.',
         '3. Cancellations made 30 days before the event will receive a 50% refund of the downpayment.',
@@ -338,7 +395,9 @@ export default function BookingDetail() {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'italic');
       const noteText = doc.splitTextToSize(
-        'Thank you for choosing EventCash Catering Services! This invoice serves as a record of your booking. For any inquiries or modifications, please contact us at info@eventcash.com or call (123) 456-7890.',
+        isCompleted 
+          ? `Thank you for choosing EventCash Catering Services! This official receipt confirms your payment has been received in full. For any inquiries, please contact us at info@eventcash.com or call (123) 456-7890.`
+          : `Thank you for choosing EventCash Catering Services! This invoice serves as a record of your booking. For any inquiries or modifications, please contact us at info@eventcash.com or call (123) 456-7890.`,
         contentWidth - 15
       );
       doc.text(noteText, margin + 8, yPosition + 5);
@@ -358,8 +417,9 @@ export default function BookingDetail() {
       doc.text('info@eventcash.com | (123) 456-7890', pageWidth / 2, yPosition + 12, { align: 'center' });
       doc.text(`Generated on: ${format(new Date(), 'MMMM dd, yyyy hh:mm a')}`, pageWidth / 2, yPosition + 16, { align: 'center' });
 
-      // Save PDF
-      const fileName = `EventCash_Invoice_${booking.customerName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`;
+      // Save PDF with appropriate filename
+      const docType = isCompleted ? 'Official_Receipt' : 'Invoice';
+      const fileName = `EventCash_${docType}_${booking.customerName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`;
       doc.save(fileName);
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -634,7 +694,7 @@ export default function BookingDetail() {
                   className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-semibold shadow-lg flex items-center justify-center gap-2"
                 >
                   <Download size={20} />
-                  Download Invoice
+                  {booking.status === 'completed' ? 'Download Official Receipt' : 'Download Invoice'}
                 </motion.button>
               </motion.div>
 

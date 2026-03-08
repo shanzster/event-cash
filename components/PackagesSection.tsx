@@ -32,6 +32,7 @@ export default function PackagesSection() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showFullscreenImage, setShowFullscreenImage] = useState(false);
 
   useEffect(() => {
     fetchPackages();
@@ -272,7 +273,7 @@ export default function PackagesSection() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
             onClick={() => setSelectedPackage(null)}
           >
             <motion.div
@@ -281,7 +282,7 @@ export default function PackagesSection() {
               exit={{ scale: 0.8, opacity: 0 }}
               transition={{ duration: 0.3 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-w-6xl w-full max-h-[90vh] backdrop-blur-2xl bg-white/95 border-2 border-primary/30 rounded-3xl overflow-hidden shadow-2xl"
+              className="relative max-w-6xl w-full max-h-[90vh] backdrop-blur-2xl bg-white/95 border-2 border-primary/30 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
             >
               {/* Close button */}
               <button
@@ -291,12 +292,12 @@ export default function PackagesSection() {
                 <X size={24} className="text-gray-900" />
               </button>
 
-              <div className="grid md:grid-cols-2 gap-0 h-full max-h-[90vh]">
+              <div className="grid md:grid-cols-2 gap-0 h-full overflow-hidden">
                 {/* LEFT SIDE - Image Gallery */}
-                <div className="relative bg-gray-900 flex items-center justify-center min-h-[40vh] md:min-h-full">
+                <div className="relative bg-gray-900 flex items-center justify-center min-h-[40vh] md:min-h-full overflow-hidden">
                   {selectedPackage.gallery && selectedPackage.gallery.length > 0 ? (
                     <motion.div 
-                      className="relative w-full h-full flex items-center justify-center p-4"
+                      className="relative w-full h-full flex items-center justify-center p-4 cursor-pointer group"
                       drag="x"
                       dragConstraints={{ left: 0, right: 0 }}
                       dragElastic={0.2}
@@ -308,6 +309,7 @@ export default function PackagesSection() {
                           prevImage();
                         }
                       }}
+                      onClick={() => setShowFullscreenImage(true)}
                     >
                       <img
                         src={selectedPackage.gallery[currentImageIndex]}
@@ -315,6 +317,14 @@ export default function PackagesSection() {
                         className="max-w-full max-h-full object-contain"
                         style={{ maxHeight: 'calc(90vh - 2rem)' }}
                       />
+
+                      {/* Click to view fullscreen hint */}
+                      <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full font-semibold flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                        </svg>
+                        Click to view fullscreen
+                      </div>
 
                       {/* Navigation arrows - only show if more than 1 image */}
                       {selectedPackage.gallery.length > 1 && (
@@ -352,13 +362,20 @@ export default function PackagesSection() {
                       )}
                     </motion.div>
                   ) : selectedPackage.imageUrl ? (
-                    <div className="w-full h-full flex items-center justify-center p-4">
+                    <div className="w-full h-full flex items-center justify-center p-4 cursor-pointer group" onClick={() => setShowFullscreenImage(true)}>
                       <img
                         src={selectedPackage.imageUrl}
                         alt={selectedPackage.name}
                         className="max-w-full max-h-full object-contain"
                         style={{ maxHeight: 'calc(90vh - 2rem)' }}
                       />
+                      {/* Click to view fullscreen hint */}
+                      <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full font-semibold flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                        </svg>
+                        Click to view fullscreen
+                      </div>
                     </div>
                   ) : (
                     <div className={`w-full h-full bg-gradient-to-br ${selectedPackage.gradient} flex items-center justify-center`}>
@@ -371,7 +388,7 @@ export default function PackagesSection() {
                 </div>
 
                 {/* RIGHT SIDE - Package details */}
-                <div className="p-6 sm:p-8 md:p-10 lg:p-12 overflow-y-auto max-h-[50vh] md:max-h-full bg-gradient-to-br from-white via-white to-primary/5">
+                <div className="p-6 sm:p-8 md:p-10 lg:p-12 overflow-y-auto bg-gradient-to-br from-white via-white to-primary/5 max-h-[90vh]">
                   <div className={`inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br ${selectedPackage.gradient} rounded-2xl mb-6 md:mb-8 shadow-xl`}>
                     {(() => {
                       const Icon = iconMap[selectedPackage.icon] || PackageIcon;
@@ -423,6 +440,117 @@ export default function PackagesSection() {
                 </div>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Fullscreen Image Viewer */}
+      <AnimatePresence>
+        {showFullscreenImage && selectedPackage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black z-[10000] flex items-center justify-center"
+            onClick={() => setShowFullscreenImage(false)}
+          >
+            {/* Close button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFullscreenImage(false);
+              }}
+              className="absolute top-4 right-4 md:top-8 md:right-8 z-20 w-12 h-12 md:w-16 md:h-16 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all hover:scale-110"
+            >
+              <X size={28} className="text-white md:hidden" />
+              <X size={36} className="text-white hidden md:block" />
+            </button>
+
+            {/* Image counter */}
+            {selectedPackage.gallery && selectedPackage.gallery.length > 1 && (
+              <div className="absolute top-4 left-4 md:top-8 md:left-8 z-20 bg-black/70 backdrop-blur-sm text-white px-4 py-2 md:px-6 md:py-3 rounded-full font-semibold text-sm md:text-base">
+                {currentImageIndex + 1} / {selectedPackage.gallery.length}
+              </div>
+            )}
+
+            {/* Main image */}
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              className="relative w-full h-full flex items-center justify-center p-4 md:p-8"
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(e, { offset, velocity }) => {
+                const swipe = Math.abs(offset.x) * velocity.x;
+                if (swipe < -10000) {
+                  nextImage();
+                } else if (swipe > 10000) {
+                  prevImage();
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={selectedPackage.gallery && selectedPackage.gallery.length > 0 
+                  ? selectedPackage.gallery[currentImageIndex] 
+                  : selectedPackage.imageUrl}
+                alt={`${selectedPackage.name} - Fullscreen`}
+                className="max-w-full max-h-full object-contain"
+              />
+            </motion.div>
+
+            {/* Navigation arrows - only show if more than 1 image */}
+            {selectedPackage.gallery && selectedPackage.gallery.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevImage();
+                  }}
+                  className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all hover:scale-110 z-20"
+                >
+                  <ChevronLeft size={28} className="text-white md:hidden" />
+                  <ChevronLeft size={36} className="text-white hidden md:block" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextImage();
+                  }}
+                  className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all hover:scale-110 z-20"
+                >
+                  <ChevronRight size={28} className="text-white md:hidden" />
+                  <ChevronRight size={36} className="text-white hidden md:block" />
+                </button>
+
+                {/* Image indicators */}
+                <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 flex gap-2 md:gap-3 z-20">
+                  {selectedPackage.gallery.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentImageIndex(idx);
+                      }}
+                      className={`h-2 md:h-3 rounded-full transition-all ${
+                        idx === currentImageIndex
+                          ? 'bg-white w-8 md:w-12'
+                          : 'bg-white/50 w-2 md:w-3 hover:bg-white/75'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Hint text */}
+            <div className="absolute bottom-20 md:bottom-24 left-1/2 -translate-x-1/2 text-white/70 text-xs md:text-sm text-center">
+              {selectedPackage.gallery && selectedPackage.gallery.length > 1 
+                ? 'Swipe or use arrows to navigate • Click outside to close'
+                : 'Click outside to close'}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
