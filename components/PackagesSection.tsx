@@ -330,14 +330,20 @@ export default function PackagesSection() {
                       {selectedPackage.gallery.length > 1 && (
                         <>
                           <button
-                            onClick={prevImage}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              prevImage();
+                            }}
                             className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 w-10 h-10 md:w-14 md:h-14 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110 z-10"
                           >
                             <ChevronLeft size={20} className="text-gray-900 md:hidden" />
                             <ChevronLeft size={28} className="text-gray-900 hidden md:block" />
                           </button>
                           <button
-                            onClick={nextImage}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              nextImage();
+                            }}
                             className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 w-10 h-10 md:w-14 md:h-14 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110 z-10"
                           >
                             <ChevronRight size={20} className="text-gray-900 md:hidden" />
@@ -349,7 +355,10 @@ export default function PackagesSection() {
                             {selectedPackage.gallery.map((_, idx) => (
                               <button
                                 key={idx}
-                                onClick={() => setCurrentImageIndex(idx)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCurrentImageIndex(idx);
+                                }}
                                 className={`h-2 md:h-3 rounded-full transition-all ${
                                   idx === currentImageIndex
                                     ? 'bg-white w-8 md:w-12'
@@ -451,7 +460,8 @@ export default function PackagesSection() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black z-[10000] flex items-center justify-center"
+            className="fixed inset-0 bg-black flex items-center justify-center"
+            style={{ zIndex: 999999 }}
             onClick={() => setShowFullscreenImage(false)}
           >
             {/* Close button */}
@@ -460,7 +470,8 @@ export default function PackagesSection() {
                 e.stopPropagation();
                 setShowFullscreenImage(false);
               }}
-              className="absolute top-4 right-4 md:top-8 md:right-8 z-20 w-12 h-12 md:w-16 md:h-16 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all hover:scale-110"
+              className="absolute top-4 right-4 md:top-8 md:right-8 w-12 h-12 md:w-16 md:h-16 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all hover:scale-110"
+              style={{ zIndex: 1000000 }}
             >
               <X size={28} className="text-white md:hidden" />
               <X size={36} className="text-white hidden md:block" />
@@ -468,7 +479,7 @@ export default function PackagesSection() {
 
             {/* Image counter */}
             {selectedPackage.gallery && selectedPackage.gallery.length > 1 && (
-              <div className="absolute top-4 left-4 md:top-8 md:left-8 z-20 bg-black/70 backdrop-blur-sm text-white px-4 py-2 md:px-6 md:py-3 rounded-full font-semibold text-sm md:text-base">
+              <div className="absolute top-4 left-4 md:top-8 md:left-8 bg-black/70 backdrop-blur-sm text-white px-4 py-2 md:px-6 md:py-3 rounded-full font-semibold text-sm md:text-base" style={{ zIndex: 1000000 }}>
                 {currentImageIndex + 1} / {selectedPackage.gallery.length}
               </div>
             )}
@@ -509,7 +520,8 @@ export default function PackagesSection() {
                     e.stopPropagation();
                     prevImage();
                   }}
-                  className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all hover:scale-110 z-20"
+                  className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all hover:scale-110"
+                  style={{ zIndex: 1000000 }}
                 >
                   <ChevronLeft size={28} className="text-white md:hidden" />
                   <ChevronLeft size={36} className="text-white hidden md:block" />
@@ -519,14 +531,15 @@ export default function PackagesSection() {
                     e.stopPropagation();
                     nextImage();
                   }}
-                  className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all hover:scale-110 z-20"
+                  className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all hover:scale-110"
+                  style={{ zIndex: 1000000 }}
                 >
                   <ChevronRight size={28} className="text-white md:hidden" />
                   <ChevronRight size={36} className="text-white hidden md:block" />
                 </button>
 
                 {/* Image indicators */}
-                <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 flex gap-2 md:gap-3 z-20">
+                <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 flex gap-2 md:gap-3" style={{ zIndex: 1000000 }}>
                   {selectedPackage.gallery.map((_, idx) => (
                     <button
                       key={idx}
