@@ -15,7 +15,9 @@ import {
   X,
   FileText,
   TrendingUp,
+  Receipt,
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useManager } from '@/contexts/ManagerContext';
@@ -408,6 +410,246 @@ export default function TransactionsPage() {
     }
   };
 
+  const downloadCustomerReceipt = (transaction: Transaction) => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 15;
+      const contentWidth = pageWidth - 2 * margin;
+      let yPosition = margin;
+
+      // EventCash brand colors
+      const primaryOrange = [255, 165, 0];
+      const primaryGold = [212, 175, 55];
+      const darkGray = [51, 51, 51];
+      const lightGray = [245, 245, 245];
+
+      // Header with gradient effect
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(0, 0, pageWidth, 45, 'F');
+      
+      doc.setFillColor(primaryGold[0], primaryGold[1], primaryGold[2]);
+      doc.rect(0, 40, pageWidth, 5, 'F');
+
+      // Company Logo/Name
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(32);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EventCash', margin, 25);
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Premium Catering Services', margin, 33);
+
+      // Document title
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('OFFICIAL RECEIPT', pageWidth - margin, 25, { align: 'right' });
+
+      yPosition = 55;
+
+      // Receipt info section
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      doc.rect(margin, yPosition, contentWidth, 25, 'F');
+      
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, 3, 25, 'F');
+      
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Receipt Details', margin + 8, yPosition + 7);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(`Receipt #: ${transaction.bookingId.substring(0, 12).toUpperCase()}`, margin + 8, yPosition + 13);
+      doc.text(`Issue Date: ${format(new Date(), 'MMMM dd, yyyy')}`, margin + 8, yPosition + 18);
+      
+      doc.text(`Event Date: ${format(transaction.eventDate?.toDate?.() || new Date(transaction.eventDate), 'MMMM dd, yyyy')}`, pageWidth - margin - 60, yPosition + 13);
+      
+      // PAID IN FULL stamp
+      doc.setFillColor(34, 197, 94);
+      doc.roundedRect(pageWidth - margin - 35, yPosition + 16, 35, 6, 2, 2, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PAID', pageWidth - margin - 17.5, yPosition + 20, { align: 'center' });
+
+      yPosition += 30;
+
+      // Customer Information
+      const columnWidth = (contentWidth - 10) / 2;
+      
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, columnWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CUSTOMER INFORMATION', margin + 5, yPosition + 5.5);
+      
+      yPosition += 12;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Name:', margin + 5, yPosition);
+      doc.setFont('helvetica', 'normal');
+      doc.text(transaction.customerName, margin + 20, yPosition);
+      yPosition += 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Email:', margin + 5, yPosition);
+      doc.setFont('helvetica', 'normal');
+      doc.text(transaction.customerEmail, margin + 20, yPosition);
+
+      // Event Details (right column)
+      const eventYStart = yPosition - 17;
+      doc.setFillColor(primaryGold[0], primaryGold[1], primaryGold[2]);
+      doc.rect(margin + columnWidth + 10, eventYStart, columnWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EVENT DETAILS', margin + columnWidth + 15, eventYStart + 5.5);
+      
+      let eventY = eventYStart + 12;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Type:', margin + columnWidth + 15, eventY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(transaction.eventType, margin + columnWidth + 30, eventY);
+      eventY += 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Package:', margin + columnWidth + 15, eventY);
+      doc.setFont('helvetica', 'normal');
+      const packageText = doc.splitTextToSize(transaction.packageName, columnWidth - 20);
+      doc.text(packageText, margin + columnWidth + 30, eventY);
+
+      yPosition += 10;
+
+      // Pricing Section
+      yPosition += 10;
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, contentWidth, 7, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PAYMENT SUMMARY', margin + 5, yPosition + 4.5);
+      
+      yPosition += 10;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+
+      // Total Amount
+      doc.setFillColor(250, 250, 250);
+      doc.rect(margin, yPosition - 2, contentWidth, 6, 'F');
+      doc.text('Total Amount', margin + 5, yPosition);
+      doc.text(`Php ${transaction.amount.toLocaleString()}.00`, pageWidth - margin - 5, yPosition, { align: 'right' });
+      yPosition += 6;
+
+      // Payment section with green background
+      yPosition += 2;
+      doc.setFillColor(34, 197, 94);
+      doc.rect(margin, yPosition, contentWidth, 28, 'F');
+      
+      // PAID IN FULL stamp
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('✓ PAID IN FULL', pageWidth / 2, yPosition + 8, { align: 'center' });
+      
+      yPosition += 14;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      
+      doc.text(`Down Payment: Php ${transaction.downpayment.toLocaleString()}.00`, margin + 8, yPosition);
+      doc.text(`Final Payment: Php ${transaction.remainingBalance.toLocaleString()}.00`, pageWidth - margin - 8, yPosition, { align: 'right' });
+      
+      yPosition += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text(`Total Paid: Php ${transaction.amount.toLocaleString()}.00`, pageWidth / 2, yPosition, { align: 'center' });
+
+      yPosition += 18;
+
+      // Terms and Conditions
+      yPosition += 3;
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, contentWidth, 7, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TERMS AND CONDITIONS', margin + 5, yPosition + 4.5);
+      
+      yPosition += 10;
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      
+      const terms = [
+        '1. Payment has been received in full for this event.',
+        '2. This official receipt serves as proof of complete payment.',
+        '3. Thank you for choosing EventCash Catering Services.'
+      ];
+      
+      terms.forEach((term) => {
+        const termLines = doc.splitTextToSize(term, contentWidth - 10);
+        doc.text(termLines, margin + 5, yPosition);
+        yPosition += termLines.length * 4;
+      });
+
+      // Footer note
+      yPosition += 3;
+      doc.setFillColor(255, 248, 220);
+      doc.rect(margin, yPosition, contentWidth, 15, 'F');
+      
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(margin, yPosition, 3, 15, 'F');
+      
+      doc.setTextColor(139, 69, 19);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'italic');
+      const noteText = doc.splitTextToSize(
+        'Thank you for choosing EventCash Catering Services! This official receipt confirms your payment has been received in full. For any inquiries, please contact us at info@eventcash.com or call (123) 456-7890.',
+        contentWidth - 15
+      );
+      doc.text(noteText, margin + 8, yPosition + 4);
+
+      // Footer
+      yPosition = pageHeight - 15;
+      doc.setFillColor(primaryOrange[0], primaryOrange[1], primaryOrange[2]);
+      doc.rect(0, yPosition, pageWidth, 15, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EventCash Catering Services', pageWidth / 2, yPosition + 5, { align: 'center' });
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.text('info@eventcash.com | (123) 456-7890', pageWidth / 2, yPosition + 9, { align: 'center' });
+      doc.text(`Generated on: ${format(new Date(), 'MMMM dd, yyyy hh:mm a')}`, pageWidth / 2, yPosition + 12, { align: 'center' });
+
+      // Save PDF
+      const fileName = `EventCash_Official_Receipt_${transaction.customerName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error('Error generating receipt:', error);
+      alert('Failed to generate receipt PDF. Please try again.');
+    }
+  };
+
   const handleExport = () => {
     const totalAmount = filteredTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
     const totalDownpayment = filteredTransactions.reduce((sum, t) => sum + (t.downpayment || 0), 0);
@@ -710,6 +952,7 @@ export default function TransactionsPage() {
                       <th className="px-6 py-4 text-right font-semibold text-sm tracking-wider">Expenses</th>
                       <th className="px-6 py-4 text-right font-semibold text-sm tracking-wider">Profit</th>
                       <th className="px-6 py-4 text-center font-semibold text-sm tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-center font-semibold text-sm tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -777,6 +1020,20 @@ export default function TransactionsPage() {
                             {transaction.status.charAt(0).toUpperCase() +
                               transaction.status.slice(1)}
                           </motion.span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {transaction.status === 'completed' && (
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => downloadCustomerReceipt(transaction)}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+                              title="Download Official Receipt"
+                            >
+                              <Receipt size={16} />
+                              Receipt
+                            </motion.button>
+                          )}
                         </td>
                       </motion.tr>
                     ))}

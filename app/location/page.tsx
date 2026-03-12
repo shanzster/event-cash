@@ -36,6 +36,7 @@ interface ContactInfo {
  */
 export default function Location() {
   const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchContactInfo();
@@ -43,14 +44,22 @@ export default function Location() {
 
   const fetchContactInfo = async () => {
     try {
+      setLoading(true);
       const docRef = doc(db, 'settings', 'contact');
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
-        setContactInfo(docSnap.data() as ContactInfo);
+        const data = docSnap.data() as ContactInfo;
+        console.log('Contact info loaded:', data);
+        console.log('Map URL:', data.mapUrl);
+        setContactInfo(data);
+      } else {
+        console.log('No contact info document found');
       }
     } catch (error) {
       console.error('Error fetching contact info:', error);
+    } finally {
+      setLoading(false);
     }
   };
   return (
@@ -101,17 +110,43 @@ export default function Location() {
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="rounded-3xl overflow-hidden shadow-2xl border-2 border-primary/30"
+              className="rounded-3xl overflow-hidden shadow-2xl border-2 border-primary/30 bg-gray-100"
             >
-              <iframe
-                src={contactInfo?.mapUrl || "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3024.2219901290355!2d-74.00601!3d40.71282!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25a20f96bfe8d%3A0x7685d66de8e0f1a4!2s123%20Main%20St%2C%20New%20York%2C%20NY%2010001!5e0!3m2!1sen!2sus!4v1234567890"}
-                width="100%"
-                height="500"
-                style={{ border: 0 }}
-                allowFullScreen={true}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              ></iframe>
+              {loading ? (
+                <div className="h-[500px] flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-primary mx-auto mb-4"></div>
+                    <p className="text-gray-600 font-semibold">Loading map...</p>
+                  </div>
+                </div>
+              ) : contactInfo?.mapUrl ? (
+                <iframe
+                  src={contactInfo.mapUrl}
+                  width="100%"
+                  height="500"
+                  style={{ border: 0 }}
+                  allowFullScreen={true}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="EventCash Location Map"
+                  onError={(e) => {
+                    console.error('Map iframe error:', e);
+                    console.log('Failed URL:', contactInfo.mapUrl);
+                  }}
+                ></iframe>
+              ) : (
+                <div className="h-[500px] flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                  <div className="text-center p-8">
+                    <MapPin size={64} className="text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 font-semibold text-lg mb-2">Map Not Configured</p>
+                    <p className="text-gray-500 text-sm max-w-md">
+                      The location map will appear here once configured in the CMS.
+                      <br />
+                      Please contact the administrator to set up the map.
+                    </p>
+                  </div>
+                </div>
+              )}
             </motion.div>
 
             {/* Location Information */}

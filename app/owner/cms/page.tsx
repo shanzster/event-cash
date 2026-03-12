@@ -1057,18 +1057,48 @@ export default function CMSPage() {
               
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Google Maps Embed URL
+                  Google Maps Embed Code or URL
                 </label>
                 <textarea
                   value={contactInfo.mapUrl || ''}
-                  onChange={(e) => setContactInfo({ ...contactInfo, mapUrl: e.target.value })}
+                  onChange={(e) => {
+                    let value = e.target.value.trim();
+                    
+                    // Auto-extract URL from iframe code if user pastes the whole iframe
+                    if (value.includes('<iframe') && value.includes('src=')) {
+                      const srcMatch = value.match(/src=["']([^"']+)["']/);
+                      if (srcMatch && srcMatch[1]) {
+                        value = srcMatch[1];
+                      }
+                    }
+                    
+                    setContactInfo({ ...contactInfo, mapUrl: value });
+                  }}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black font-mono text-sm"
                   rows={4}
-                  placeholder="https://www.google.com/maps/embed?pb=..."
+                  placeholder="Paste either the full iframe code OR just the URL..."
                 />
-                <p className="text-xs text-gray-500 mt-2">
-                  To get the embed URL: Go to Google Maps → Search your location → Click "Share" → Click "Embed a map" → Copy the URL from the iframe src attribute
-                </p>
+                <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm font-semibold text-blue-900 mb-2">📍 How to get your map:</p>
+                  <ol className="text-xs text-blue-800 space-y-1 ml-4 list-decimal">
+                    <li>Go to <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Google Maps</a></li>
+                    <li>Search for your business location</li>
+                    <li>Click the <strong>"Share"</strong> button</li>
+                    <li>Click the <strong>"Embed a map"</strong> tab</li>
+                    <li>Copy the <strong>entire iframe code</strong> and paste it here</li>
+                  </ol>
+                  <p className="text-xs text-blue-700 mt-2 font-semibold">
+                    ✨ Tip: You can paste the entire iframe code - we'll automatically extract the URL!
+                  </p>
+                </div>
+                {contactInfo.mapUrl && (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-xs font-semibold text-green-900 mb-1">✓ Map URL Configured:</p>
+                    <p className="text-xs text-green-700 font-mono break-all">
+                      {contactInfo.mapUrl.substring(0, 100)}...
+                    </p>
+                  </div>
+                )}
               </div>
             </motion.div>
 

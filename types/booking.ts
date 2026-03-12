@@ -106,6 +106,8 @@ export interface BookingDetails {
   totalPrice: number;
   finalPrice?: number;
   downpayment?: number;
+  finalPayment?: number;
+  priceAdjustment?: number;
   discount?: number;
   budget?: number;
   expenses?: Expense[];
