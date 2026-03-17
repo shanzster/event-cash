@@ -182,8 +182,8 @@ export default function ManagerUsers() {
     }
 
     try {
-      // Use UID as document ID
-      const userRef = doc(db, 'users', selectedUser.uid);
+      // Use ID (which is the document ID) instead of uid
+      const userRef = doc(db, 'users', selectedUser.id);
       await updateDoc(userRef, {
         displayName: formData.displayName,
         fullName: formData.displayName, // Add fullName for compatibility
@@ -229,13 +229,13 @@ export default function ManagerUsers() {
     if (!userToDelete) return;
 
     try {
-      // Delete from Firestore users collection
-      await deleteDoc(doc(db, 'users', userToDelete.uid));
+      // Delete from Firestore users collection using id (document ID)
+      await deleteDoc(doc(db, 'users', userToDelete.id));
       
       // If manager, also delete from managers collection
       if (userToDelete.role === 'manager') {
         try {
-          await deleteDoc(doc(db, 'managers', userToDelete.uid));
+          await deleteDoc(doc(db, 'managers', userToDelete.id));
         } catch (error) {
           console.log('Manager document not found or already deleted');
         }
