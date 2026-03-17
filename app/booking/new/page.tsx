@@ -218,7 +218,7 @@ export default function NewBooking() {
     
     // Use fetched add-ons from Firestore instead of static data
     const foodAddonsPrice = formData.additionalFood.reduce((total, foodId) => {
-      const item = addOns.find(a => a.id === foodId && a.category === 'food');
+      const item = addOns.find(a => a.id === foodId);
       return total + (item?.price || 0);
     }, 0);
     
