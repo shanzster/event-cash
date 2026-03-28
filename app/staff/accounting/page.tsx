@@ -94,8 +94,13 @@ export default function StaffAccountingPage() {
     }, [] as Array<{ method: string; amount: number; count: number }>);
 
   const monthlyCashFlowEntries = cashFlowEntries.filter(e => {
-    const d = e.date?.toDate?.() || new Date(e.date);
-    return isWithinInterval(d, { start: monthStart, end: monthEnd });
+    try {
+      const d = e.date?.toDate?.() || new Date(e.date);
+      if (isNaN(d.getTime())) return false;
+      return isWithinInterval(d, { start: monthStart, end: monthEnd });
+    } catch {
+      return false;
+    }
   });
 
   const monthlyTransactionIncome = monthlyBookings.filter(b => ['confirmed','completed'].includes(b.status)).reduce((s,b) => s + (b.totalPrice - b.discount), 0);
@@ -106,18 +111,34 @@ export default function StaffAccountingPage() {
   const generateCashFlowEntries = () => {
     const entries: any[] = [];
     monthlyBookings.filter(b => ['confirmed','completed'].includes(b.status)).forEach(b => {
-      const d = b.eventDate?.toDate?.() || new Date(b.eventDate);
-      entries.push({ id: `income-${b.id}`, type: 'income', amount: b.totalPrice - b.discount, description: `${b.customerName} - ${b.eventType}`, category: 'booking_income', date: d, notes: `Package: ${b.packageName || 'N/A'}`, source: 'booking' });
+      try {
+        const d = b.eventDate?.toDate?.() || new Date(b.eventDate);
+        if (!isNaN(d.getTime())) {
+          entries.push({ id: `income-${b.id}`, type: 'income', amount: b.totalPrice - b.discount, description: `${b.customerName} - ${b.eventType}`, category: 'booking_income', date: d, notes: `Package: ${b.packageName || 'N/A'}`, source: 'booking' });
+        }
+      } catch (e) {
+        console.error('Error processing booking date:', e);
+      }
     });
     monthlyBookings.filter(b => ['confirmed','completed'].includes(b.status) && getExpenseAmount(b.expenses) > 0).forEach(b => {
-      const d = b.eventDate?.toDate?.() || new Date(b.eventDate);
-      entries.push({ id: `expense-${b.id}`, type: 'expense', amount: getExpenseAmount(b.expenses), description: `Expenses - ${b.customerName} (${b.eventType})`, category: 'booking_expense', date: d, notes: `Event expenses`, source: 'booking' });
+      try {
+        const d = b.eventDate?.toDate?.() || new Date(b.eventDate);
+        if (!isNaN(d.getTime())) {
+          entries.push({ id: `expense-${b.id}`, type: 'expense', amount: getExpenseAmount(b.expenses), description: `Expenses - ${b.customerName} (${b.eventType})`, category: 'booking_expense', date: d, notes: `Event expenses`, source: 'booking' });
+        }
+      } catch (e) {
+        console.error('Error processing booking expense date:', e);
+      }
     });
     monthlyCashFlowEntries.forEach(e => entries.push({ ...e, source: 'manual' }));
     return entries.sort((a, b) => {
-      const dA = a.date?.toDate?.() || a.date?.getTime?.() || new Date(a.date).getTime();
-      const dB = b.date?.toDate?.() || b.date?.getTime?.() || new Date(b.date).getTime();
-      return dB - dA;
+      try {
+        const dA = a.date?.toDate?.() || a.date?.getTime?.() || new Date(a.date).getTime();
+        const dB = b.date?.toDate?.() || b.date?.getTime?.() || new Date(b.date).getTime();
+        return dB - dA;
+      } catch {
+        return 0;
+      }
     });
   };
 
@@ -126,8 +147,28 @@ export default function StaffAccountingPage() {
   const getFilteredCashflowEntries = () => {
     let f = automaticCashFlowEntries;
     if (reportFilters.type !== 'all') f = f.filter(e => e.type === reportFilters.type);
-    if (reportFilters.dateFrom) f = f.filter(e => new Date(e.date) >= new Date(reportFilters.dateFrom));
-    if (reportFilters.dateTo) f = f.filter(e => new Date(e.date) <= new Date(reportFilters.dateTo));
+    if (reportFilters.dateFrom) {
+      const fromDate = new Date(reportFilters.dateFrom);
+      f = f.filter(e => {
+        try {
+          const d = e.date?.toDate?.() || new Date(e.date);
+          return !isNaN(d.getTime()) && d >= fromDate;
+        } catch {
+          return false;
+        }
+      });
+    }
+    if (reportFilters.dateTo) {
+      const toDate = new Date(reportFilters.dateTo);
+      f = f.filter(e => {
+        try {
+          const d = e.date?.toDate?.() || new Date(e.date);
+          return !isNaN(d.getTime()) && d <= toDate;
+        } catch {
+          return false;
+        }
+      });
+    }
     return f;
   };
 
@@ -148,11 +189,19 @@ export default function StaffAccountingPage() {
     <body><h1 style="border-bottom:3px solid #F59E0B;padding-bottom:10px">Cashflow Report</h1>
     <p>Printed: ${format(new Date(),'MMMM dd, yyyy HH:mm')} | Records: ${filteredCashflowForReport.length}</p>
     <table><thead><tr><th>Date</th><th>Description</th><th>Notes</th><th>Amount</th><th>Type</th></tr></thead>
-    <tbody>${filteredCashflowForReport.map(e => `<tr>
-      <td>${format(new Date(e.date),'MMM dd, yyyy')}</td><td>${e.description}</td><td>${e.notes||''}</td>
-      <td style="color:${e.type==='income'?'#16A34A':'#DC2626'}">${e.type==='income'?'+':'-'}₱${e.amount.toLocaleString()}.00</td>
-      <td><span class="${e.type}">${e.type==='income'?'Income':'Expense'}</span></td>
-    </tr>`).join('')}</tbody></table>
+    <tbody>${filteredCashflowForReport.map(e => {
+      try {
+        const d = e.date?.toDate?.() || new Date(e.date);
+        const dateStr = isNaN(d.getTime()) ? 'Invalid Date' : format(d,'MMM dd, yyyy');
+        return `<tr>
+          <td>${dateStr}</td><td>${e.description}</td><td>${e.notes||''}</td>
+          <td style="color:${e.type==='income'?'#16A34A':'#DC2626'}">${e.type==='income'?'+':'-'}₱${e.amount.toLocaleString()}.00</td>
+          <td><span class="${e.type}">${e.type==='income'?'Income':'Expense'}</span></td>
+        </tr>`;
+      } catch {
+        return `<tr><td>Invalid Date</td><td>${e.description}</td><td>${e.notes||''}</td><td>₱${e.amount.toLocaleString()}.00</td><td>${e.type}</td></tr>`;
+      }
+    }).join('')}</tbody></table>
     <div class="summary">
       <div class="sr"><span>Total Income:</span><span style="color:#16A34A">₱${totalIncome.toLocaleString()}.00</span></div>
       <div class="sr"><span>Total Expenses:</span><span style="color:#DC2626">₱${totalExpense.toLocaleString()}.00</span></div>
@@ -166,10 +215,19 @@ export default function StaffAccountingPage() {
   const handleExportCashflowExcel = () => {
     const rows = [
       ['Date','Description','Notes','Amount','Type'],
-      ...filteredCashflowForReport.map(e => [
-        format(new Date(e.date),'MMM dd, yyyy'), e.description, e.notes||'',
-        `₱${e.amount.toLocaleString()}.00`, e.type==='income'?'Income':'Expense',
-      ]),
+      ...filteredCashflowForReport.map(e => {
+        try {
+          const d = e.date?.toDate?.() || new Date(e.date);
+          const dateStr = isNaN(d.getTime()) ? 'Invalid Date' : format(d,'MMM dd, yyyy');
+          return [
+            dateStr, e.description, e.notes||'',
+            `₱${e.amount.toLocaleString()}.00`, e.type==='income'?'Income':'Expense',
+          ];
+        } catch {
+          return ['Invalid Date', e.description, e.notes||'', `₱${e.amount.toLocaleString()}.00`, e.type];
+        }
+      }),
+      [],
       [], ['Total Income','','',`₱${filteredCashflowForReport.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0).toLocaleString()}.00`,''],
       ['Total Expenses','','',`₱${filteredCashflowForReport.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0).toLocaleString()}.00`,''],
     ].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
@@ -568,9 +626,18 @@ export default function StaffAccountingPage() {
                         <th className="px-6 py-3 text-center text-sm font-bold text-gray-900">Actions</th>
                       </tr></thead>
                       <tbody>
-                        {filteredCashflowForReport.map((entry, i) => (
+                        {filteredCashflowForReport.map((entry, i) => {
+                          const entryDate = (() => {
+                            try {
+                              const d = entry.date?.toDate?.() || new Date(entry.date);
+                              return isNaN(d.getTime()) ? null : d;
+                            } catch {
+                              return null;
+                            }
+                          })();
+                          return (
                           <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
-                            <td className="px-6 py-4 text-sm text-gray-700">{format(new Date(entry.date),'MMM dd, yyyy')}</td>
+                            <td className="px-6 py-4 text-sm text-gray-700">{entryDate ? format(entryDate,'MMM dd, yyyy') : 'Invalid Date'}</td>
                             <td className="px-6 py-4 font-semibold text-gray-900">{entry.description}</td>
                             <td className="px-6 py-4 text-sm text-gray-600">{entry.notes}</td>
                             <td className={`px-6 py-4 text-right font-bold ${entry.type==='income'?'text-green-600':'text-red-600'}`}>
@@ -591,7 +658,8 @@ export default function StaffAccountingPage() {
                               )}
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
