@@ -14,7 +14,7 @@ import {
 import { packages as staticPackages, eventTypes, serviceTypes } from '@/lib/packages';
 import { Package } from '@/types/booking';
 import dynamic from 'next/dynamic';
-import { collection, addDoc, serverTimestamp, getDocs, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, getDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { isDateClosed } from '@/lib/closedDays';
 import { format } from 'date-fns';
@@ -245,6 +245,42 @@ export default function NewBooking() {
         alert('Sorry, the selected date is not available for bookings. Please choose another date.');
         setIsSubmitting(false);
         return;
+      }
+
+      // Enforce 1-week advance booking rule
+      const selectedDate = new Date(formData.eventDate);
+      const minDate = new Date();
+      minDate.setDate(minDate.getDate() + 7);
+      minDate.setHours(0, 0, 0, 0);
+      if (selectedDate < minDate) {
+        alert('Bookings must be made at least 1 week before the event date.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Check daily booking limit
+      const { getDoc: getDocFn, doc: docFn, collection: colFn, getDocs: getDocsFn, query: queryFn, where: whereFn } = await import('firebase/firestore');
+      const calendarSettingsSnap = await getDoc(doc(db, 'settings', 'calendar'));
+      if (calendarSettingsSnap.exists()) {
+        const dailyLimit = calendarSettingsSnap.data().dailyBookingLimit || 0;
+        if (dailyLimit > 0) {
+          const dateStart = new Date(formData.eventDate);
+          dateStart.setHours(0, 0, 0, 0);
+          const dateEnd = new Date(formData.eventDate);
+          dateEnd.setHours(23, 59, 59, 999);
+          const existingBookingsSnap = await getDocs(
+            query(collection(db, 'bookings'),
+              where('eventDate', '>=', dateStart),
+              where('eventDate', '<=', dateEnd),
+              where('status', 'in', ['pending', 'confirmed'])
+            )
+          );
+          if (existingBookingsSnap.size >= dailyLimit) {
+            alert(`Sorry, this date is fully booked. Maximum ${dailyLimit} booking(s) allowed per day. Please choose another date.`);
+            setIsSubmitting(false);
+            return;
+          }
+        }
       }
 
       const pricing = calculatePricing();
@@ -551,7 +587,7 @@ export default function NewBooking() {
                         <Calendar size={18} className="text-primary" /> Event Date
                       </label>
                       <input type="date" name="eventDate" value={formData.eventDate} onChange={handleChange} required
-                        min={new Date().toISOString().split('T')[0]}
+                        min={(() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().split('T')[0]; })()}
                         className="w-full px-4 py-3 bg-white/70 border-2 border-primary/20 rounded-xl focus:outline-none focus:border-primary text-gray-900 transition-all" />
                     </motion.div>
 
@@ -1104,10 +1140,10 @@ export default function NewBooking() {
                 )}
 
                 {/* Terms */}
-                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-                  <p className="text-sm text-gray-700">
-                    <span className="font-bold">Note:</span> By confirming this booking, you agree to our terms and conditions. 
-                    Your booking will be marked as pending and our team will contact you shortly to confirm the details.
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
+                  <p className="text-sm font-bold text-amber-800 mb-1">Terms &amp; Conditions</p>
+                  <p className="text-sm text-amber-700">
+                    A required <span className="font-bold">50% downpayment</span> is needed to confirm your booking. The remaining 50% balance is due on or before the event date. Cancellations made less than 30 days before the event are non-refundable.
                   </p>
                 </div>
               </div>

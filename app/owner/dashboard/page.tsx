@@ -149,7 +149,7 @@ export default function ManagerDashboard() {
             className="mb-8"
           >
             <h1 className="text-4xl font-bold text-gray-900">Dashboard Overview</h1>
-            <p className="text-gray-600 mt-2">Welcome back, {managerData?.displayName}</p>
+            <p className="text-gray-600 mt-2">Welcome, {managerData?.displayName}</p>
           </motion.div>
 
           {/* Quick Stats Grid */}

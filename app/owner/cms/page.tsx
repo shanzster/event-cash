@@ -82,8 +82,10 @@ interface PackageData {
 export default function CMSPage() {
   const router = useRouter();
   const { managerUser, isManager, loading: managerLoading } = useManager();
-  const [activeTab, setActiveTab] = useState<'contact' | 'content' | 'packages'>('content');
+  const [activeTab, setActiveTab] = useState<'contact' | 'content' | 'packages' | 'business'>('content');
   const [packagesSubTab, setPackagesSubTab] = useState<'packages' | 'addons'>('packages');
+  const [businessInfo, setBusinessInfo] = useState({ businessName: '', address: '', tinNumber: '', email: '', phone: '' });
+  const [savingBusiness, setSavingBusiness] = useState(false);
   
   const [contactInfo, setContactInfo] = useState<ContactInfo>({
     phone: '',
@@ -175,6 +177,7 @@ export default function CMSPage() {
       fetchContactInfo();
       fetchHomeContent();
       fetchPackages();
+      fetchBusinessInfo();
     }
   }, [isManager, managerUser, managerLoading, router]);
 
@@ -209,6 +212,26 @@ export default function CMSPage() {
       console.error('Error fetching contact info:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBusinessInfo = async () => {
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'business'));
+      if (snap.exists()) setBusinessInfo(snap.data() as any);
+    } catch (e) { console.error('Error fetching business info:', e); }
+  };
+
+  const handleSaveBusiness = async () => {
+    setSavingBusiness(true);
+    try {
+      await setDoc(doc(db, 'settings', 'business'), businessInfo, { merge: true });
+      alert('Business information saved!');
+    } catch (e) {
+      console.error('Error saving business info:', e);
+      alert('Failed to save business information');
+    } finally {
+      setSavingBusiness(false);
     }
   };
 
@@ -481,6 +504,7 @@ export default function CMSPage() {
                 <h1 className="text-4xl font-bold text-gray-900">Website CMS</h1>
                 <p className="text-gray-600 mt-2">Manage your website content and contact information</p>
               </div>
+              {(activeTab === 'content' || activeTab === 'contact') && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -491,6 +515,7 @@ export default function CMSPage() {
                 <Save size={20} />
                 {saving ? 'Saving...' : 'Save Changes'}
               </motion.button>
+              )}
             </div>
 
             {/* Tabs */}
@@ -527,6 +552,16 @@ export default function CMSPage() {
               >
                 <Phone className="inline mr-2" size={20} />
                 Contact Information
+              </button>
+              <button
+                onClick={() => setActiveTab('business')}
+                className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                  activeTab === 'business'
+                    ? 'bg-gradient-to-r from-primary to-yellow-600 text-white shadow-lg'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Business Info (Invoice)
               </button>
             </div>
           </motion.div>
@@ -1171,7 +1206,7 @@ export default function CMSPage() {
           )}
 
           {/* Save Button (Bottom) - Only show for content and contact tabs */}
-          {activeTab !== 'packages' && (
+          {(activeTab === 'content' || activeTab === 'contact') && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1194,8 +1229,7 @@ export default function CMSPage() {
           {/* Packages & Add-ons Tab */}
           {activeTab === 'packages' && (
             <div className="space-y-6">
-              {/* Sub-tabs */}
-              <div className="flex gap-2">
+              {/* Sub-tabs */}              <div className="flex gap-2">
                 <button
                   onClick={() => setPackagesSubTab('packages')}
                   className={`px-6 py-3 rounded-lg font-semibold transition-all ${
@@ -1561,6 +1595,46 @@ export default function CMSPage() {
           </motion.div>
         </div>
       )}
+          {/* Business Info Tab */}
+          {activeTab === 'business' && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Business Information</h2>
+              <p className="text-gray-600 mb-6 text-sm">This information appears on all generated Sales Invoices (BIR-compliant).</p>
+              <div className="space-y-4">
+                {[
+                  { label: 'Business Name', key: 'businessName', placeholder: 'EventCash Catering Services' },
+                  { label: 'Address', key: 'address', placeholder: '123 Main Street, City, State 00000' },
+                  { label: 'TIN Number', key: 'tinNumber', placeholder: '000-000-000-000' },
+                  { label: 'Email', key: 'email', placeholder: 'info@eventcash.com' },
+                  { label: 'Phone', key: 'phone', placeholder: '(123) 456-7890' },
+                ].map(({ label, key, placeholder }) => (
+                  <div key={key}>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
+                    <input
+                      type="text"
+                      value={(businessInfo as any)[key]}
+                      onChange={e => setBusinessInfo(prev => ({ ...prev, [key]: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
+                      placeholder={placeholder}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 flex justify-end">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleSaveBusiness}
+                  disabled={savingBusiness}
+                  className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold shadow-xl disabled:opacity-50"
+                >
+                  <Save size={20} />
+                  {savingBusiness ? 'Saving...' : 'Save Business Info'}
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+
     </ManagerSidebar>
   );
 }

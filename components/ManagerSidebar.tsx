@@ -22,7 +22,8 @@ import {
   BookOpen,
   Briefcase,
   TrendingUp,
-  CalendarDays
+  CalendarDays,
+  MessageSquare,
 } from 'lucide-react';
 import { useState as useStateFirebase } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -59,6 +60,7 @@ export default function ManagerSidebar({ children }: ManagerSidebarProps) {
     { icon: Package, label: 'Bookings', path: '/owner/bookings' },
     { icon: CalendarDays, label: 'Upcoming Events', path: '/owner/upcoming-events' },
     { icon: CalendarIcon, label: 'Calendar', path: '/owner/calendar' },
+    { icon: MessageSquare, label: 'Messages', path: '/owner/messages' },
     { icon: TrendingUp, label: 'Client Transactions', path: '/owner/transactions' },
     { icon: BookOpen, label: 'Accounting and Payments', path: '/owner/accounting' },
     { icon: BarChart3, label: 'Financial Reports', path: '/owner/reports' },

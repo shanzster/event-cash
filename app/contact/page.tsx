@@ -5,7 +5,7 @@ import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, Facebook, Instagram, Twitter, Clock } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface ContactInfo {
@@ -39,6 +39,7 @@ export default function Contact() {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
 
   useEffect(() => {
@@ -63,14 +64,27 @@ export default function Contact() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    setSubmitted(true);
-    setTimeout(() => {
+    setSubmitting(true);
+    try {
+      await addDoc(collection(db, 'messages'), {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        message: formData.message,
+        status: 'unread',
+        createdAt: serverTimestamp(),
+      });
+      setSubmitted(true);
       setFormData({ name: '', email: '', phone: '', message: '' });
-      setSubmitted(false);
-    }, 3000);
+      setTimeout(() => setSubmitted(false), 4000);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Failed to send message. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -314,12 +328,13 @@ export default function Contact() {
 
                 <motion.button
                   type="submit"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-primary via-yellow-600 to-primary text-white rounded-xl font-semibold shadow-xl flex items-center justify-center gap-2"
+                  disabled={submitting}
+                  whileHover={{ scale: submitting ? 1 : 1.05 }}
+                  whileTap={{ scale: submitting ? 1 : 0.95 }}
+                  className="w-full px-6 py-4 bg-gradient-to-r from-primary via-yellow-600 to-primary text-white rounded-xl font-semibold shadow-xl flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Send size={20} />
-                  Send Message
+                  {submitting ? 'Sending...' : 'Send Message'}
                 </motion.button>
 
                 {submitted && (

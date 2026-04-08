@@ -28,6 +28,7 @@ import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, serv
 import { db } from '@/lib/firebase';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { generateSalesInvoice, type InvoiceType } from '@/components/SalesInvoice';
 import { jsPDF } from 'jspdf';
 import { formatCurrency } from '@/lib/currency';
 
@@ -2220,28 +2221,39 @@ export default function EventDetailPage() {
             className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-2xl font-bold text-gray-900">Download Invoice</h3>
+              <h3 className="text-2xl font-bold text-gray-900">Generate Sales Invoice</h3>
               <button onClick={() => setShowInvoiceTypeModal(false)} className="text-gray-500 hover:text-gray-700">
                 <X size={24} />
               </button>
             </div>
 
-            <p className="text-gray-600 mb-6">Choose which type of invoice you want to download:</p>
+            <p className="text-gray-600 mb-6">Select the type of Sales Invoice to generate:</p>
 
             <div className="space-y-3">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  downloadCustomerInvoice();
+                onClick={async () => {
                   setShowInvoiceTypeModal(false);
+                  const finalPrice = booking.finalPrice || booking.totalPrice || 0;
+                  const dp = booking.downpayment || 0;
+                  await generateSalesInvoice('downpayment', {
+                    bookingId: booking.id, customerName: booking.customerName,
+                    customerEmail: booking.customerEmail, customerPhone: booking.customerPhone,
+                    eventType: booking.eventType, eventDate: booking.eventDate?.toDate ? booking.eventDate.toDate() : new Date(booking.eventDate),
+                    eventTime: booking.eventTime, packageName: booking.packageName,
+                    guestCount: booking.guestCount, location: booking.location?.address,
+                    basePrice: booking.totalPrice || 0, priceAdjustment: booking.priceAdjustment,
+                    subtotal: booking.totalPrice || 0, total: finalPrice,
+                    downpayment: dp, remainingBalance: finalPrice - dp, status: booking.status,
+                  });
                 }}
-                className="w-full p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+                className="w-full p-4 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
               >
                 <div className="flex items-center justify-between">
                   <div className="text-left">
-                    <p className="text-lg font-bold">Customer Invoice</p>
-                    <p className="text-sm text-blue-100">Clean invoice without expenses or budget details</p>
+                    <p className="text-lg font-bold">Downpayment Invoice</p>
+                    <p className="text-sm text-yellow-100">Partial Payment / Downpayment</p>
                   </div>
                   <Download size={24} />
                 </div>
@@ -2250,20 +2262,62 @@ export default function EventDetailPage() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  downloadOwnerInvoice();
+                onClick={async () => {
                   setShowInvoiceTypeModal(false);
+                  const finalPrice = booking.finalPrice || booking.totalPrice || 0;
+                  await generateSalesInvoice('full_payment', {
+                    bookingId: booking.id, customerName: booking.customerName,
+                    customerEmail: booking.customerEmail, customerPhone: booking.customerPhone,
+                    eventType: booking.eventType, eventDate: booking.eventDate?.toDate ? booking.eventDate.toDate() : new Date(booking.eventDate),
+                    eventTime: booking.eventTime, packageName: booking.packageName,
+                    guestCount: booking.guestCount, location: booking.location?.address,
+                    basePrice: booking.totalPrice || 0, priceAdjustment: booking.priceAdjustment,
+                    subtotal: booking.totalPrice || 0, total: finalPrice,
+                    downpayment: booking.downpayment, status: booking.status,
+                  });
                 }}
                 className="w-full p-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
               >
                 <div className="flex items-center justify-between">
                   <div className="text-left">
-                    <p className="text-lg font-bold">Owner Invoice</p>
-                    <p className="text-sm text-green-100">Detailed invoice with expenses, budget, and profit</p>
+                    <p className="text-lg font-bold">Full Payment Invoice</p>
+                    <p className="text-sm text-green-100">Paid in Full</p>
                   </div>
                   <Download size={24} />
                 </div>
               </motion.button>
+
+              {booking.status === 'completed' && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={async () => {
+                    setShowInvoiceTypeModal(false);
+                    const finalPrice = booking.finalPrice || booking.totalPrice || 0;
+                    const dp = booking.downpayment || 0;
+                    await generateSalesInvoice('final_payment', {
+                      bookingId: booking.id, customerName: booking.customerName,
+                      customerEmail: booking.customerEmail, customerPhone: booking.customerPhone,
+                      eventType: booking.eventType, eventDate: booking.eventDate?.toDate ? booking.eventDate.toDate() : new Date(booking.eventDate),
+                      eventTime: booking.eventTime, packageName: booking.packageName,
+                      guestCount: booking.guestCount, location: booking.location?.address,
+                      basePrice: booking.totalPrice || 0, priceAdjustment: booking.priceAdjustment,
+                      subtotal: booking.totalPrice || 0, total: finalPrice,
+                      downpayment: dp, finalPayment: booking.finalPayment || (finalPrice - dp),
+                      status: booking.status,
+                    });
+                  }}
+                  className="w-full p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-left">
+                      <p className="text-lg font-bold">Final Payment Invoice</p>
+                      <p className="text-sm text-blue-100">Final Payment / Settlement of Balance</p>
+                    </div>
+                    <Download size={24} />
+                  </div>
+                </motion.button>
+              )}
             </div>
 
             <motion.button

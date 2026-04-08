@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import CustomerLayout from '@/components/CustomerLayout';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format } from 'date-fns';
-import { Calendar, Clock, MapPin, Users, Eye, Package as PackageIcon } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Eye, Package as PackageIcon, X } from 'lucide-react';
 
 interface BookingDetails {
   id: string;
@@ -38,6 +38,25 @@ export default function MyBookings() {
   const [bookings, setBookings] = useState<BookingDetails[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled'>('all');
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) return;
+    setCancellingId(bookingId);
+    try {
+      await updateDoc(doc(db, 'bookings', bookingId), {
+        status: 'cancelled',
+        cancelledAt: new Date(),
+        cancelledBy: 'customer',
+      });
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b));
+    } catch (e) {
+      console.error('Error cancelling booking:', e);
+      alert('Failed to cancel booking. Please try again.');
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   // Convert 24-hour time to 12-hour format
   const formatTimeTo12Hour = (time: string) => {
@@ -298,6 +317,16 @@ export default function MyBookings() {
                         <Eye size={20} />
                         View Details
                       </button>
+                      {booking.status === 'pending' && (
+                        <button
+                          onClick={() => handleCancelBooking(booking.id)}
+                          disabled={cancellingId === booking.id}
+                          className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold shadow-lg hover:scale-105 transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                        >
+                          <X size={20} />
+                          {cancellingId === booking.id ? 'Cancelling...' : 'Cancel Booking'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </motion.div>

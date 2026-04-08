@@ -3,9 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Clock, MapPin, User, X, Ban, Plus, Trash2 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO } from 'date-fns';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { ChevronLeft, ChevronRight, Clock, MapPin, User, X, Ban, Plus, Trash2 } from 'lucide-react';import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO } from 'date-fns';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Booking {
@@ -40,9 +39,13 @@ export default function ManagerCalendar({ bookings }: ManagerCalendarProps) {
   const [closedDayReason, setClosedDayReason] = useState('');
   const [selectedDateForClosure, setSelectedDateForClosure] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
+  const [dailyLimit, setDailyLimit] = useState<number>(0);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [limitInput, setLimitInput] = useState('');
 
   useEffect(() => {
     fetchClosedDays();
+    fetchDailyLimit();
   }, []);
 
   const fetchClosedDays = async () => {
@@ -58,6 +61,31 @@ export default function ManagerCalendar({ bookings }: ManagerCalendarProps) {
       setClosedDays(closedDaysData);
     } catch (error) {
       console.error('Error fetching closed days:', error);
+    }
+  };
+
+  const fetchDailyLimit = async () => {
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'calendar'));
+      if (snap.exists()) {
+        setDailyLimit(snap.data().dailyBookingLimit || 0);
+        setLimitInput(String(snap.data().dailyBookingLimit || 0));
+      }
+    } catch (e) {
+      console.error('Error fetching daily limit:', e);
+    }
+  };
+
+  const saveDailyLimit = async () => {
+    const val = parseInt(limitInput) || 0;
+    try {
+      await setDoc(doc(db, 'settings', 'calendar'), { dailyBookingLimit: val }, { merge: true });
+      setDailyLimit(val);
+      setShowLimitModal(false);
+      alert('Daily booking limit saved!');
+    } catch (e) {
+      console.error('Error saving limit:', e);
+      alert('Failed to save limit');
     }
   };
 
@@ -186,6 +214,13 @@ export default function ManagerCalendar({ bookings }: ManagerCalendarProps) {
         <h2 className="text-2xl font-bold text-gray-900">
           {format(currentMonth, 'MMMM yyyy')}
         </h2>
+        <button
+          onClick={() => setShowLimitModal(true)}
+          className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+        >
+          <Plus size={16} />
+          Daily Limit: {dailyLimit === 0 ? 'Unlimited' : dailyLimit}
+        </button>
       </div>
 
       {/* Day Labels */}
@@ -221,6 +256,7 @@ export default function ManagerCalendar({ bookings }: ManagerCalendarProps) {
           const hasConfirmed = dayBookings.some(b => b.status === 'confirmed');
           const isClosed = isClosedDay(day);
           const closedInfo = getClosedDayInfo(day);
+          const isAtLimit = dailyLimit > 0 && dayBookings.filter(b => b.status !== 'cancelled').length >= dailyLimit;
 
           return (
             <motion.div
@@ -242,7 +278,7 @@ export default function ManagerCalendar({ bookings }: ManagerCalendarProps) {
               className={`
                 aspect-square p-2 rounded-lg border-2 cursor-pointer transition-all relative
                 ${isToday ? 'border-primary bg-primary/5' : isCurrentMonth ? 'border-gray-200 hover:border-primary/50' : 'border-gray-100 hover:border-gray-300'}
-                ${isClosed ? 'bg-red-50 border-red-300' : dayBookings.length > 0 ? 'bg-blue-50' : isCurrentMonth ? 'bg-white' : 'bg-gray-50'}
+                ${isClosed ? 'bg-red-50 border-red-300' : isAtLimit ? 'bg-orange-50 border-orange-300' : dayBookings.length > 0 ? 'bg-blue-50' : isCurrentMonth ? 'bg-white' : 'bg-gray-50'}
                 ${!isCurrentMonth ? 'opacity-40' : ''}
               `}
               title={isCurrentMonth ? 'Right-click to mark as closed' : ''}
@@ -257,6 +293,13 @@ export default function ManagerCalendar({ bookings }: ManagerCalendarProps) {
                   <div className="flex items-center gap-1 mb-1">
                     <Ban size={12} className="text-red-600" />
                     <span className="text-[10px] text-red-600 font-semibold">CLOSED</span>
+                  </div>
+                )}
+
+                {/* At limit indicator */}
+                {!isClosed && isAtLimit && (
+                  <div className="flex items-center gap-1 mb-1">
+                    <span className="text-[10px] text-orange-600 font-semibold">FULL ({dailyLimit})</span>
                   </div>
                 )}
 
@@ -329,11 +372,56 @@ export default function ManagerCalendar({ bookings }: ManagerCalendarProps) {
             <Ban size={14} className="text-red-600" />
             <span className="text-gray-600">Closed Day</span>
           </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded bg-orange-300" />
+            <span className="text-gray-600">At Booking Limit</span>
+          </div>
         </div>
         <p className="text-xs text-gray-500 mt-3">
           Right-click on any day to mark it as closed/unavailable for bookings
         </p>
       </div>
+
+      {/* Daily Limit Modal */}
+      <AnimatePresence>
+        {showLimitModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowLimitModal(false)} className="fixed inset-0 bg-black/50 z-40" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full z-50">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Daily Booking Limit</h3>
+                <button onClick={() => setShowLimitModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X size={20} className="text-gray-600" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Set the maximum number of bookings allowed per day. Set to 0 for unlimited.
+              </p>
+              <input
+                type="number"
+                min="0"
+                value={limitInput}
+                onChange={e => setLimitInput(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary text-black text-lg font-semibold mb-4"
+                placeholder="0 = unlimited"
+              />
+              <div className="flex gap-3">
+                <button onClick={() => setShowLimitModal(false)}
+                  className="flex-1 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button onClick={saveDailyLimit}
+                  className="flex-1 py-3 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-xl font-semibold hover:shadow-lg">
+                  Save Limit
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Closed Day Modal */}
       <AnimatePresence>
@@ -478,8 +566,7 @@ export default function ManagerCalendar({ bookings }: ManagerCalendarProps) {
       </AnimatePresence>
 
       {/* Bookings Modal */}
-      <AnimatePresence>
-        {selectedDay && (
+      <AnimatePresence>        {selectedDay && (
           <>
             {/* Overlay */}
             <motion.div

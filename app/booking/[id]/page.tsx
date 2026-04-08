@@ -18,12 +18,13 @@ import {
   Download,
   X
 } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { BookingDetails } from '@/types/booking';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
+import { generateSalesInvoice, type InvoiceType } from '@/components/SalesInvoice';
 
 export default function BookingDetail() {
   const router = useRouter();
@@ -33,6 +34,55 @@ export default function BookingDetail() {
   const [loadingBooking, setLoadingBooking] = useState(true);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showInvoiceTypeModal, setShowInvoiceTypeModal] = useState(false);
+  const [cancellingBooking, setCancellingBooking] = useState(false);
+
+  const handleCancelBooking = async () => {
+    if (!booking || booking.status !== 'pending') return;
+    if (!confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) return;
+    setCancellingBooking(true);
+    try {
+      await updateDoc(doc(db, 'bookings', booking.id), {
+        status: 'cancelled',
+        cancelledAt: new Date(),
+        cancelledBy: 'customer',
+      });
+      setBooking({ ...booking, status: 'cancelled' });
+    } catch (e) {
+      console.error('Error cancelling booking:', e);
+      alert('Failed to cancel booking. Please try again.');
+    } finally {
+      setCancellingBooking(false);
+    }
+  };
+
+  const handleDownloadSalesInvoice = async (type: InvoiceType) => {
+    if (!booking) return;
+    const finalPrice = (booking as any).finalPrice || booking.totalPrice || 0;
+    const downpayment = (booking as any).downpayment || 0;
+    await generateSalesInvoice(type, {
+      bookingId: booking.id,
+      customerName: booking.customerName,
+      customerEmail: booking.customerEmail,
+      customerPhone: booking.customerPhone,
+      eventType: booking.eventType,
+      eventDate: booking.eventDate,
+      eventTime: formatTimeTo12Hour(booking.eventTime),
+      packageName: booking.packageName,
+      guestCount: booking.guestCount,
+      location: booking.location?.address,
+      basePrice: booking.basePrice || booking.totalPrice || 0,
+      foodAddonsPrice: booking.foodAddonsPrice,
+      servicesAddonsPrice: booking.servicesAddonsPrice,
+      servicePrice: booking.servicePrice,
+      priceAdjustment: (booking as any).priceAdjustment,
+      subtotal: booking.totalPrice || 0,
+      total: finalPrice,
+      downpayment,
+      remainingBalance: finalPrice - downpayment,
+      finalPayment: (booking as any).finalPayment,
+      status: booking.status,
+    });
+  };
 
   const formatTimeTo12Hour = (time: string) => {
     if (!time) return '';
@@ -681,35 +731,35 @@ export default function BookingDetail() {
                 {booking.status === 'completed' ? (
                   <div className="space-y-3">
                     <motion.button
-                      onClick={() => downloadInvoice('final')}
+                      onClick={() => handleDownloadSalesInvoice('final_payment')}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-semibold shadow-lg flex items-center justify-center gap-2"
                     >
                       <Download size={20} />
-                      Download Official Receipt (Paid)
+                      Sales Invoice (Final Payment)
                     </motion.button>
                     <motion.button
-                      onClick={() => downloadInvoice('initial')}
+                      onClick={() => handleDownloadSalesInvoice('full_payment')}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold shadow-lg flex items-center justify-center gap-2"
                     >
                       <Download size={20} />
-                      Download Initial Invoice
+                      Sales Invoice (Full Payment)
                     </motion.button>
                   </div>
-                ) : (
+                ) : booking.status === 'confirmed' ? (
                   <motion.button
-                    onClick={() => downloadInvoice('initial')}
+                    onClick={() => handleDownloadSalesInvoice('downpayment')}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-semibold shadow-lg flex items-center justify-center gap-2"
+                    className="w-full px-4 py-3 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-xl font-semibold shadow-lg flex items-center justify-center gap-2"
                   >
                     <Download size={20} />
-                    Download Invoice
+                    Sales Invoice (Downpayment)
                   </motion.button>
-                )}
+                ) : null}
               </motion.div>
 
               {booking.status === 'pending' && (
@@ -717,12 +767,9 @@ export default function BookingDetail() {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="backdrop-blur-xl bg-gradient-to-br from-primary/10 to-yellow-600/10 border-2 border-primary/30 rounded-3xl p-6 shadow-lg"
+                  className="backdrop-blur-xl bg-white/90 border-2 border-red-200 rounded-3xl p-6 shadow-lg space-y-3"
                 >
-                  <h3 className="text-lg font-bold mb-3 text-gray-900">Need Changes?</h3>
-                  <p className="text-sm text-gray-700 mb-4">
-                    Contact us to modify or cancel your booking.
-                  </p>
+                  <h3 className="text-lg font-bold text-gray-900">Manage Booking</h3>
                   <motion.button
                     onClick={() => setShowContactModal(true)}
                     whileHover={{ scale: 1.05 }}
@@ -731,6 +778,16 @@ export default function BookingDetail() {
                   >
                     Contact Us
                   </motion.button>
+                  <motion.button
+                    onClick={handleCancelBooking}
+                    disabled={cancellingBooking}
+                    whileHover={{ scale: cancellingBooking ? 1 : 1.05 }}
+                    whileTap={{ scale: cancellingBooking ? 1 : 0.95 }}
+                    className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {cancellingBooking ? 'Cancelling...' : 'Cancel Booking'}
+                  </motion.button>
+                  <p className="text-xs text-gray-500 text-center">Only pending bookings can be cancelled</p>
                 </motion.div>
               )}
             </div>
