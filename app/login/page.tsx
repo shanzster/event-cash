@@ -107,7 +107,7 @@ export default function Login() {
                     >
                       <img src="/event_cash_logo.png" alt="EventCash Logo" className="w-full h-full object-contain" />
                     </motion.div>
-                    <h2 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">Welcome Back!</h2>
+                    <h2 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">Welcome</h2>
                     <p className="text-white/90 text-lg drop-shadow">Sign in to continue your culinary journey</p>
                   </div>
                 </div>
