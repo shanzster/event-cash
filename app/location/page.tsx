@@ -97,7 +97,7 @@ export default function Location() {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto drop-shadow-lg"
             >
-              Located in the heart of Gourmet City, easily accessible and ready to serve you
+              Located in the dazzling Iba, Zambales, easily accessible and ready to serve fellow Zambalenos.
             </motion.p>
           </div>
         </section>
