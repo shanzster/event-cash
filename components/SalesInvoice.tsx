@@ -3,7 +3,7 @@
 import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, increment, setDoc } from 'firebase/firestore';
+import { doc, getDoc, runTransaction, setDoc } from 'firebase/firestore';
 
 export type InvoiceType = 'downpayment' | 'final_payment' | 'full_payment';
 
@@ -41,34 +41,34 @@ interface BusinessInfo {
   phone?: string;
 }
 
+// Use a transaction so the counter increments exactly once per call
 async function getNextInvoiceNumber(): Promise<string> {
+  const dateStr = format(new Date(), 'yyyyMMdd');
   try {
     const counterRef = doc(db, 'settings', 'invoiceCounter');
-    const counterSnap = await getDoc(counterRef);
-
     let nextNum = 1;
-    if (counterSnap.exists()) {
-      nextNum = (counterSnap.data().count || 0) + 1;
-      await updateDoc(counterRef, { count: increment(1) });
-    } else {
-      await setDoc(counterRef, { count: 1 });
-    }
 
-    const dateStr = format(new Date(), 'yyyyMMdd');
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(counterRef);
+      if (snap.exists()) {
+        nextNum = (snap.data().count || 0) + 1;
+        tx.update(counterRef, { count: nextNum });
+      } else {
+        tx.set(counterRef, { count: 1 });
+        nextNum = 1;
+      }
+    });
+
     return `SI-${dateStr}-${String(nextNum).padStart(4, '0')}`;
   } catch {
-    const dateStr = format(new Date(), 'yyyyMMdd');
     return `SI-${dateStr}-${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}`;
   }
 }
 
 async function getBusinessInfo(): Promise<BusinessInfo> {
   try {
-    const bizRef = doc(db, 'settings', 'business');
-    const bizSnap = await getDoc(bizRef);
-    if (bizSnap.exists()) {
-      return bizSnap.data() as BusinessInfo;
-    }
+    const snap = await getDoc(doc(db, 'settings', 'business'));
+    if (snap.exists()) return snap.data() as BusinessInfo;
   } catch {}
   return {
     businessName: 'EventCash Catering Services',
@@ -83,8 +83,11 @@ export async function generateSalesInvoice(
   invoiceType: InvoiceType,
   data: SalesInvoiceData
 ): Promise<void> {
-  const invoiceNumber = await getNextInvoiceNumber();
-  const bizInfo = await getBusinessInfo();
+  // Fetch data first, generate PDF after — avoids any double-trigger
+  const [invoiceNumber, bizInfo] = await Promise.all([
+    getNextInvoiceNumber(),
+    getBusinessInfo(),
+  ]);
 
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -94,96 +97,102 @@ export async function generateSalesInvoice(
   let y = margin;
 
   const orange: [number, number, number] = [255, 140, 0];
-  const gold: [number, number, number] = [212, 175, 55];
-  const dark: [number, number, number] = [40, 40, 40];
-  const light: [number, number, number] = [248, 248, 248];
-  const white: [number, number, number] = [255, 255, 255];
+  const gold:   [number, number, number] = [212, 175, 55];
+  const dark:   [number, number, number] = [40,  40,  40];
+  const light:  [number, number, number] = [248, 248, 248];
+  const white:  [number, number, number] = [255, 255, 255];
 
   const invoiceDescriptions: Record<InvoiceType, string> = {
-    downpayment: 'PARTIAL PAYMENT / DOWNPAYMENT',
+    downpayment:   'PARTIAL PAYMENT / DOWNPAYMENT',
     final_payment: 'FINAL PAYMENT / SETTLEMENT OF BALANCE',
-    full_payment: 'FULL PAYMENT',
+    full_payment:  'FULL PAYMENT',
   };
 
   const paymentStatuses: Record<InvoiceType, string> = {
-    downpayment: 'DOWNPAYMENT',
+    downpayment:   'DOWNPAYMENT',
     final_payment: 'FINAL PAYMENT',
-    full_payment: 'PAID IN FULL',
+    full_payment:  'PAID IN FULL',
   };
 
-  // ── Header ──────────────────────────────────────────────────────────────
+  // ── Header ────────────────────────────────────────────────────────────────
+  // Taller header so left and right content don't overlap
+  const headerH = 48;
   pdf.setFillColor(...orange);
-  pdf.rect(0, 0, pageWidth, 42, 'F');
+  pdf.rect(0, 0, pageWidth, headerH, 'F');
   pdf.setFillColor(...gold);
-  pdf.rect(0, 39, pageWidth, 3, 'F');
+  pdf.rect(0, headerH - 3, pageWidth, 3, 'F');
 
+  // Left side — business info
   pdf.setTextColor(...white);
-  pdf.setFontSize(26);
+  pdf.setFontSize(18);                      // reduced from 26 to prevent overlap
   pdf.setFont('helvetica', 'bold');
-  pdf.text(bizInfo.businessName, margin, 18);
+  pdf.text(bizInfo.businessName, margin, 14);
 
-  pdf.setFontSize(9);
+  pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(bizInfo.address, margin, 25);
-  pdf.text(`TIN: ${bizInfo.tinNumber}`, margin, 30);
-  if (bizInfo.phone) pdf.text(`Tel: ${bizInfo.phone}`, margin, 35);
+  // Wrap address if long
+  const addrLines = pdf.splitTextToSize(bizInfo.address, 90);
+  pdf.text(addrLines, margin, 20);
+  const afterAddr = 20 + addrLines.length * 4;
+  pdf.text(`TIN: ${bizInfo.tinNumber}`, margin, afterAddr);
+  if (bizInfo.phone) pdf.text(`Tel: ${bizInfo.phone}`, margin, afterAddr + 5);
 
-  pdf.setFontSize(20);
+  // Right side — document title (right-aligned, won't overlap left content)
+  pdf.setFontSize(16);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('SALES INVOICE', pageWidth - margin, 18, { align: 'right' });
+  pdf.text('SALES INVOICE', pageWidth - margin, 14, { align: 'right' });
 
-  pdf.setFontSize(9);
+  pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(invoiceDescriptions[invoiceType], pageWidth - margin, 26, { align: 'right' });
+  pdf.text(invoiceDescriptions[invoiceType], pageWidth - margin, 21, { align: 'right' });
 
-  y = 50;
+  y = headerH + 6;
 
-  // ── Invoice Meta ─────────────────────────────────────────────────────────
+  // ── Invoice Meta ──────────────────────────────────────────────────────────
   pdf.setFillColor(...light);
-  pdf.rect(margin, y, cw, 20, 'F');
+  pdf.rect(margin, y, cw, 22, 'F');
   pdf.setFillColor(...orange);
-  pdf.rect(margin, y, 3, 20, 'F');
+  pdf.rect(margin, y, 3, 22, 'F');
 
   pdf.setTextColor(...dark);
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'bold');
   pdf.text(`Invoice No: ${invoiceNumber}`, margin + 6, y + 6);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(`Date of Transaction: ${format(new Date(), 'MMMM dd, yyyy')}`, margin + 6, y + 11);
-  pdf.text(`Event Date: ${format(data.eventDate, 'MMMM dd, yyyy')}`, margin + 6, y + 16);
+  pdf.text(`Date of Transaction: ${format(new Date(), 'MMMM dd, yyyy')}`, margin + 6, y + 12);
+  pdf.text(`Event Date: ${format(data.eventDate, 'MMMM dd, yyyy')}`, margin + 6, y + 18);
 
   pdf.setFont('helvetica', 'bold');
   pdf.text(`Booking ID: ${data.bookingId.substring(0, 14).toUpperCase()}`, pageWidth - margin - 5, y + 6, { align: 'right' });
 
-  // Payment status badge
+  // Status badge
   const statusColors: Record<InvoiceType, [number, number, number]> = {
-    downpayment: [234, 179, 8],
-    final_payment: [59, 130, 246],
-    full_payment: [34, 197, 94],
+    downpayment:   [234, 179, 8],
+    final_payment: [59,  130, 246],
+    full_payment:  [34,  197, 94],
   };
   pdf.setFillColor(...statusColors[invoiceType]);
-  pdf.roundedRect(pageWidth - margin - 38, y + 10, 38, 7, 2, 2, 'F');
+  pdf.roundedRect(pageWidth - margin - 40, y + 12, 40, 7, 2, 2, 'F');
   pdf.setTextColor(...white);
   pdf.setFontSize(7);
   pdf.setFont('helvetica', 'bold');
-  pdf.text(paymentStatuses[invoiceType], pageWidth - margin - 19, y + 15, { align: 'center' });
+  pdf.text(paymentStatuses[invoiceType], pageWidth - margin - 20, y + 17, { align: 'center' });
 
-  y += 26;
+  y += 28;
 
-  // ── Customer Info ─────────────────────────────────────────────────────────
+  // ── Customer Information ──────────────────────────────────────────────────
   pdf.setFillColor(...orange);
   pdf.rect(margin, y, cw, 7, 'F');
   pdf.setTextColor(...white);
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'bold');
   pdf.text('CUSTOMER INFORMATION', margin + 4, y + 5);
-
   y += 10;
+
   pdf.setTextColor(...dark);
   pdf.setFontSize(8);
-
-  const custRows = [
-    ['Name:', data.customerName],
+  const custRows: [string, string][] = [
+    ['Name:',  data.customerName],
     ['Email:', data.customerEmail],
     ['Phone:', data.customerPhone],
   ];
@@ -194,7 +203,6 @@ export async function generateSalesInvoice(
     pdf.text(val, margin + 22, y);
     y += 5;
   });
-
   y += 4;
 
   // ── Booking Details ───────────────────────────────────────────────────────
@@ -204,27 +212,25 @@ export async function generateSalesInvoice(
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'bold');
   pdf.text('BOOKING DETAILS', margin + 4, y + 5);
-
   y += 10;
+
   pdf.setTextColor(...dark);
   pdf.setFontSize(8);
-
-  const bookingRows = [
+  const bookingRows: [string, string][] = [
     ['Event Type:', data.eventType],
-    ['Package:', data.packageName],
-    ['Guests:', String(data.guestCount || 'N/A')],
-    ['Time:', data.eventTime],
-    ...(data.location ? [['Venue:', data.location]] : []),
+    ['Package:',    data.packageName],
+    ['Guests:',     String(data.guestCount || 'N/A')],
+    ['Time:',       data.eventTime],
+    ...(data.location ? [['Venue:', data.location] as [string, string]] : []),
   ];
   bookingRows.forEach(([label, val]) => {
     pdf.setFont('helvetica', 'bold');
     pdf.text(label, margin + 4, y);
     pdf.setFont('helvetica', 'normal');
-    const wrapped = pdf.splitTextToSize(val, cw - 30);
-    pdf.text(wrapped, margin + 30, y);
+    const wrapped = pdf.splitTextToSize(val, cw - 32);
+    pdf.text(wrapped, margin + 32, y);
     y += wrapped.length * 4.5;
   });
-
   y += 4;
 
   // ── Pricing Breakdown ─────────────────────────────────────────────────────
@@ -234,68 +240,83 @@ export async function generateSalesInvoice(
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'bold');
   pdf.text('PRICING BREAKDOWN', margin + 4, y + 5);
-
   y += 10;
+
   pdf.setTextColor(...dark);
   pdf.setFontSize(8);
 
-  const priceRows: [string, number][] = [
-    ['Base Package', data.basePrice],
-  ];
-  if (data.foodAddonsPrice) priceRows.push(['Food Add-ons', data.foodAddonsPrice]);
-  if (data.servicesAddonsPrice) priceRows.push(['Service Add-ons', data.servicesAddonsPrice]);
-  if (data.servicePrice) priceRows.push(['Service Fee', data.servicePrice]);
+  const priceRows: [string, number][] = [['Base Package', data.basePrice]];
+  if ((data.foodAddonsPrice ?? 0) > 0)     priceRows.push(['Food Add-ons',    data.foodAddonsPrice!]);
+  if ((data.servicesAddonsPrice ?? 0) > 0) priceRows.push(['Service Add-ons', data.servicesAddonsPrice!]);
+  if ((data.servicePrice ?? 0) > 0)        priceRows.push(['Service Fee',     data.servicePrice!]);
   if (data.priceAdjustment && data.priceAdjustment !== 0) {
     priceRows.push([data.priceAdjustment > 0 ? 'Additional Charges' : 'Discount', data.priceAdjustment]);
   }
 
+  const rowH = 5.5;
   priceRows.forEach(([label, val], i) => {
-    if (i % 2 === 0) { pdf.setFillColor(...light); pdf.rect(margin, y - 2, cw, 5.5, 'F'); }
+    if (i % 2 === 0) { pdf.setFillColor(...light); pdf.rect(margin, y - 2, cw, rowH, 'F'); }
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(...dark);
     pdf.text(label, margin + 4, y);
     if (val < 0) pdf.setTextColor(34, 197, 94);
-    pdf.text(`Php ${Math.abs(val).toLocaleString()}.00${val < 0 ? ' (-)' : ''}`, pageWidth - margin - 3, y, { align: 'right' });
+    pdf.text(
+      `Php ${Math.abs(val).toLocaleString('en-PH', { minimumFractionDigits: 2 })}${val < 0 ? ' (-)' : ''}`,
+      pageWidth - margin - 3, y, { align: 'right' }
+    );
     pdf.setTextColor(...dark);
-    y += 5.5;
+    y += rowH;
   });
 
   // Subtotal
   y += 1;
-  pdf.setFillColor(230, 230, 230);
+  pdf.setFillColor(220, 220, 220);
   pdf.rect(margin, y - 2, cw, 6, 'F');
   pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(...dark);
   pdf.text('Subtotal', margin + 4, y + 2);
-  pdf.text(`Php ${data.subtotal.toLocaleString()}.00`, pageWidth - margin - 3, y + 2, { align: 'right' });
+  pdf.text(
+    `Php ${data.subtotal.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`,
+    pageWidth - margin - 3, y + 2, { align: 'right' }
+  );
   y += 8;
 
-  if (data.tax) {
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Tax (VAT 12%)', margin + 4, y);
-    pdf.text(`Php ${data.tax.toLocaleString()}.00`, pageWidth - margin - 3, y, { align: 'right' });
-    y += 5.5;
-  }
-  if (data.otherCharges) {
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Other Charges', margin + 4, y);
-    pdf.text(`Php ${data.otherCharges.toLocaleString()}.00`, pageWidth - margin - 3, y, { align: 'right' });
-    y += 5.5;
-  }
+  // TAX — always show (0.00 if not provided)
+  const taxAmt = data.tax ?? 0;
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(...dark);
+  pdf.text('Tax (VAT 12%)', margin + 4, y);
+  pdf.text(
+    `Php ${taxAmt.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`,
+    pageWidth - margin - 3, y, { align: 'right' }
+  );
+  y += rowH;
 
-  // Total
-  y += 1;
+  // OTHER — always show (0.00 if not provided)
+  const otherAmt = data.otherCharges ?? 0;
+  pdf.text('Other Charges', margin + 4, y);
+  pdf.text(
+    `Php ${otherAmt.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`,
+    pageWidth - margin - 3, y, { align: 'right' }
+  );
+  y += rowH + 1;
+
+  // TOTAL
   pdf.setFillColor(...orange);
   pdf.rect(margin, y - 2, cw, 9, 'F');
   pdf.setTextColor(...white);
   pdf.setFontSize(11);
   pdf.setFont('helvetica', 'bold');
   pdf.text('TOTAL', margin + 4, y + 4);
-  pdf.text(`Php ${data.total.toLocaleString()}.00`, pageWidth - margin - 3, y + 4, { align: 'right' });
+  pdf.text(
+    `Php ${data.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`,
+    pageWidth - margin - 3, y + 4, { align: 'right' }
+  );
   pdf.setTextColor(...dark);
   pdf.setFontSize(8);
   y += 13;
 
-  // ── Payment Status Section ────────────────────────────────────────────────
+  // ── Payment Status ────────────────────────────────────────────────────────
   pdf.setFillColor(...gold);
   pdf.rect(margin, y, cw, 7, 'F');
   pdf.setTextColor(...white);
@@ -315,11 +336,11 @@ export async function generateSalesInvoice(
     pdf.setFont('helvetica', 'bold');
     pdf.text('Downpayment (Paid):', margin + 4, y + 2);
     pdf.setTextColor(34, 197, 94);
-    pdf.text(`Php ${dp.toLocaleString()}.00`, pageWidth - margin - 3, y + 2, { align: 'right' });
+    pdf.text(`Php ${dp.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`, pageWidth - margin - 3, y + 2, { align: 'right' });
     pdf.setTextColor(...dark);
     pdf.text('Remaining Balance:', margin + 4, y + 8);
     pdf.setTextColor(220, 38, 38);
-    pdf.text(`Php ${rb.toLocaleString()}.00`, pageWidth - margin - 3, y + 8, { align: 'right' });
+    pdf.text(`Php ${rb.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`, pageWidth - margin - 3, y + 8, { align: 'right' });
     pdf.setTextColor(...dark);
     y += 18;
   } else if (invoiceType === 'final_payment') {
@@ -329,14 +350,13 @@ export async function generateSalesInvoice(
     pdf.rect(margin, y - 2, cw, 14, 'F');
     pdf.setFont('helvetica', 'bold');
     pdf.text('Downpayment (Previously Paid):', margin + 4, y + 2);
-    pdf.text(`Php ${dp.toLocaleString()}.00`, pageWidth - margin - 3, y + 2, { align: 'right' });
+    pdf.text(`Php ${dp.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`, pageWidth - margin - 3, y + 2, { align: 'right' });
     pdf.text('Remaining Balance Paid:', margin + 4, y + 8);
     pdf.setTextColor(34, 197, 94);
-    pdf.text(`Php ${fp.toLocaleString()}.00`, pageWidth - margin - 3, y + 8, { align: 'right' });
+    pdf.text(`Php ${fp.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`, pageWidth - margin - 3, y + 8, { align: 'right' });
     pdf.setTextColor(...dark);
     y += 18;
   } else {
-    // full payment
     pdf.setFillColor(34, 197, 94);
     pdf.rect(margin, y - 2, cw, 9, 'F');
     pdf.setTextColor(...white);
@@ -378,9 +398,10 @@ export async function generateSalesInvoice(
     y += lines.length * 4.5;
   });
 
-  // ── Thank You (final/full payment only) ──────────────────────────────────
+  // ── Thank You (final / full payment only) ─────────────────────────────────
   if (invoiceType !== 'downpayment') {
     y += 4;
+    if (y > pageHeight - 30) { pdf.addPage(); y = margin; }
     pdf.setFillColor(255, 248, 220);
     pdf.rect(margin, y, cw, 18, 'F');
     pdf.setFillColor(...orange);
@@ -411,11 +432,11 @@ export async function generateSalesInvoice(
   pdf.setFontSize(7);
   pdf.text(
     `${bizInfo.email || ''} | ${bizInfo.phone || ''} | Generated: ${format(new Date(), 'MMM dd, yyyy hh:mm a')}`,
-    pageWidth / 2,
-    footerY + 10,
-    { align: 'center' }
+    pageWidth / 2, footerY + 10, { align: 'center' }
   );
 
-  const typeLabel = invoiceType === 'downpayment' ? 'Downpayment' : invoiceType === 'final_payment' ? 'FinalPayment' : 'FullPayment';
+  // Single save call — no double download
+  const typeLabel = invoiceType === 'downpayment' ? 'Downpayment'
+    : invoiceType === 'final_payment' ? 'FinalPayment' : 'FullPayment';
   pdf.save(`SalesInvoice_${typeLabel}_${data.customerName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`);
 }
