@@ -320,162 +320,530 @@ export default function ManagerReports() {
     .sort((a, b) => b.totalSpent - a.totalSpent)
     .slice(0, 5);
 
-  // Print Report
+  // Print Report — Income vs Expenses (tab-aware, rich layout)
   const handlePrintReport = () => {
-    const printWindow = window.open('', '', 'height=600,width=900');
-    const reportTitle = activeReport === 'income-expenses' ? 'Income vs Expenses' : 
-                       activeReport === 'profitability' ? 'Profitability Analysis' :
-                       activeReport === 'budget' ? 'Budget vs Actual' : 'Cashflow Report';
-    
-    const tableHtml = `
-      <html>
-        <head>
-          <title>${reportTitle} Report</title>
-          <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { 
-              font-family: 'Poppins', sans-serif;
-              background-color: #ffffff;
-              padding: 40px;
-              color: #333;
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 40px;
-              border-bottom: 3px solid #F59E0B;
-              padding-bottom: 20px;
-            }
-            .header h1 {
-              font-size: 32px;
-              font-weight: 700;
-              color: #1F2937;
-              margin-bottom: 8px;
-            }
-            .info-bar {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 30px;
-              padding: 15px 20px;
-              background-color: #F3F4F6;
-              border-radius: 8px;
-              font-size: 12px;
-            }
-            .info-bar span {
-              font-weight: 600;
-              color: #1F2937;
-            }
-            .content {
-              margin-bottom: 30px;
-            }
-            .metric {
-              display: inline-block;
-              margin-right: 30px;
-              margin-bottom: 20px;
-            }
-            .metric-label {
-              font-size: 12px;
-              color: #6B7280;
-              font-weight: 600;
-            }
-            .metric-value {
-              font-size: 18px;
-              font-weight: 700;
-              color: #1F2937;
-              margin-top: 5px;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 40px;
-              padding-top: 20px;
-              border-top: 1px solid #E5E7EB;
-              font-size: 11px;
-              color: #9CA3AF;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>${reportTitle} Report</h1>
-            <p style="color: #6B7280; font-size: 13px; margin-top: 5px;">Event Cash Management System</p>
-          </div>
-          
-          <div class="info-bar">
-            <div>Month: <span>${format(selectedMonth, 'MMMM yyyy')}</span></div>
-            <div>Printed: <span>${format(new Date(), 'MMMM dd, yyyy HH:mm:ss')}</span></div>
-            <div>Report Type: <span>${reportTitle}</span></div>
-          </div>
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) return;
 
-          <div class="content">
-            <div class="metric">
-              <div class="metric-label">Monthly Revenue</div>
-              <div class="metric-value">₱${monthlyRevenue.toLocaleString()}.00</div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Total Expenses</div>
-              <div class="metric-value">₱${monthlyExpenses.toLocaleString()}.00</div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Net Profit</div>
-              <div class="metric-value">₱${(monthlyRevenue - monthlyExpenses).toLocaleString()}.00</div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Profit Margin</div>
-              <div class="metric-value">${monthlyRevenue > 0 ? ((((monthlyRevenue - monthlyExpenses) / monthlyRevenue) * 100).toFixed(1)) : 0}%</div>
-            </div>
-          </div>
+    const profitMargin = monthlyRevenue > 0
+      ? (((monthlyRevenue - monthlyExpenses) / monthlyRevenue) * 100).toFixed(1)
+      : '0.0';
 
-          <div class="footer">
-            <p>This is a confidential financial report. © Event Cash Management System</p>
+    const activeFilters = [
+      filters.status !== 'all' ? `Status: ${filters.status}` : null,
+      filters.eventType !== 'all' ? `Event Type: ${filters.eventType}` : null,
+      filters.dateFrom ? `From: ${filters.dateFrom}` : null,
+      filters.dateTo ? `To: ${filters.dateTo}` : null,
+      filters.minAmount ? `Min: ₱${filters.minAmount}` : null,
+      filters.maxAmount ? `Max: ₱${filters.maxAmount}` : null,
+    ].filter(Boolean);
+
+    const eventTypeRows = eventTypeBreakdown.map((item, i) => `
+      <tr style="background:${i % 2 === 0 ? '#fff' : '#fafafa'}">
+        <td style="padding:10px 14px;font-weight:600;color:#111">${item.type}</td>
+        <td style="padding:10px 14px;text-align:center;color:#374151">${item.count}</td>
+        <td style="padding:10px 14px;text-align:right;color:#2563eb;font-weight:700">₱${item.revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+        <td style="padding:10px 14px;text-align:right;color:#dc2626;font-weight:700">₱${item.expenses.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+        <td style="padding:10px 14px;text-align:right;font-weight:700;color:${(item.revenue - item.expenses) >= 0 ? '#16a34a' : '#dc2626'}">₱${(item.revenue - item.expenses).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+      </tr>
+    `).join('');
+
+    const topCustomerRows = topCustomers.map((c, i) => `
+      <tr style="background:${i % 2 === 0 ? '#fff' : '#fafafa'}">
+        <td style="padding:10px 14px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:28px;height:28px;border-radius:50%;background:#f59e0b;color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">${i + 1}</div>
+            <span style="font-weight:600;color:#111">${c.name}</span>
           </div>
-        </body>
-      </html>
-    `;
-    
-    if (printWindow) {
-      printWindow.document.write(tableHtml);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 250);
-    }
+        </td>
+        <td style="padding:10px 14px;text-align:center;color:#374151">${c.bookings}</td>
+        <td style="padding:10px 14px;text-align:right;color:#d97706;font-weight:700">₱${c.totalSpent.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+      </tr>
+    `).join('');
+
+    const revenueBarWidth = monthlyRevenue + monthlyExpenses > 0
+      ? ((monthlyRevenue / (monthlyRevenue + monthlyExpenses)) * 100).toFixed(1)
+      : '0';
+    const expenseBarWidth = monthlyRevenue + monthlyExpenses > 0
+      ? ((monthlyExpenses / (monthlyRevenue + monthlyExpenses)) * 100).toFixed(1)
+      : '0';
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>Income vs Expenses — ${format(selectedMonth, 'MMMM yyyy')}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',sans-serif;background:#fff;color:#111;font-size:13px;padding:0}
+    @page{size:A4;margin:0}
+    @media print{body{padding:0}}
+
+    /* ── Header ── */
+    .header{background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);color:#fff;padding:28px 36px 22px;display:flex;justify-content:space-between;align-items:flex-start}
+    .header-left h1{font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-bottom:4px}
+    .header-left p{font-size:12px;opacity:.85}
+    .header-right{text-align:right}
+    .header-right .month-badge{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:20px;padding:4px 14px;font-size:13px;font-weight:700;margin-bottom:6px;display:inline-block}
+    .header-right .meta{font-size:10px;opacity:.8}
+
+    /* ── Filter bar ── */
+    .filter-bar{background:#fef3c7;border-bottom:2px solid #f59e0b;padding:8px 36px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;color:#92400e}
+    .filter-bar strong{font-weight:700}
+    .filter-tag{background:#f59e0b;color:#fff;border-radius:10px;padding:2px 10px;font-weight:600;font-size:10px}
+
+    /* ── Body ── */
+    .body{padding:24px 36px}
+
+    /* ── KPI cards ── */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+    .kpi{border-radius:10px;padding:16px;border-left:4px solid}
+    .kpi.blue{background:#eff6ff;border-color:#2563eb}
+    .kpi.red{background:#fef2f2;border-color:#dc2626}
+    .kpi.green{background:#f0fdf4;border-color:#16a34a}
+    .kpi.purple{background:#faf5ff;border-color:#7c3aed}
+    .kpi-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:6px}
+    .kpi-value{font-size:20px;font-weight:800;color:#111;line-height:1}
+    .kpi-sub{font-size:10px;color:#9ca3af;margin-top:4px}
+
+    /* ── Comparison bar ── */
+    .comparison{background:#f9fafb;border-radius:10px;padding:16px 20px;margin-bottom:24px;border:1px solid #e5e7eb}
+    .comparison h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#374151;margin-bottom:14px}
+    .bar-row{margin-bottom:12px}
+    .bar-label{display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px;font-weight:600;color:#374151}
+    .bar-track{background:#e5e7eb;border-radius:99px;height:10px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:99px}
+
+    /* ── Section header ── */
+    .section-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;margin-top:22px}
+    .section-header h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#374151}
+    .section-header .line{flex:1;height:1px;background:#e5e7eb}
+
+    /* ── Tables ── */
+    table{width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb}
+    thead tr{background:#f59e0b}
+    thead th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.4px}
+    thead th.right{text-align:right}
+    thead th.center{text-align:center}
+    tbody tr{border-bottom:1px solid #f3f4f6}
+    tbody tr:last-child{border-bottom:none}
+    .no-data{text-align:center;padding:20px;color:#9ca3af;font-style:italic}
+
+    /* ── Summary box ── */
+    .summary-box{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #f59e0b;border-radius:10px;padding:16px 20px;margin-top:22px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .summary-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed #fcd34d}
+    .summary-item:last-child{border-bottom:none}
+    .summary-item span:first-child{font-size:11px;font-weight:600;color:#92400e}
+    .summary-item span:last-child{font-size:13px;font-weight:800;color:#111}
+
+    /* ── Footer ── */
+    .footer{background:#1f2937;color:#9ca3af;padding:14px 36px;display:flex;justify-content:space-between;align-items:center;font-size:10px;margin-top:24px}
+    .footer strong{color:#f59e0b}
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Income vs Expenses Report</h1>
+      <p>Event Cash Management System &nbsp;·&nbsp; Financial Overview</p>
+    </div>
+    <div class="header-right">
+      <div class="month-badge">${format(selectedMonth, 'MMMM yyyy')}</div>
+      <div class="meta">Printed: ${format(new Date(), 'MMM dd, yyyy hh:mm a')}</div>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  ${activeFilters.length > 0 ? `
+  <div class="filter-bar">
+    <strong>Active Filters:</strong>
+    ${activeFilters.map(f => `<span class="filter-tag">${f}</span>`).join('')}
+    <span style="margin-left:auto;color:#78350f">${monthlyConfirmedBookings.length} booking(s) in view</span>
+  </div>` : `
+  <div class="filter-bar">
+    <strong>Filters:</strong> <span>No filters applied</span>
+    <span style="margin-left:auto;color:#78350f">${monthlyConfirmedBookings.length} booking(s) in view</span>
+  </div>`}
+
+  <div class="body">
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi blue">
+        <div class="kpi-label">Monthly Revenue</div>
+        <div class="kpi-value">₱${monthlyRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-sub">${monthlyConfirmedBookings.length} booking(s)</div>
+      </div>
+      <div class="kpi red">
+        <div class="kpi-label">Monthly Expenses</div>
+        <div class="kpi-value">₱${monthlyExpenses.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-sub">Sum of all costs</div>
+      </div>
+      <div class="kpi green">
+        <div class="kpi-label">Net Profit</div>
+        <div class="kpi-value">₱${monthlyProfit.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-sub">Revenue − Expenses</div>
+      </div>
+      <div class="kpi purple">
+        <div class="kpi-label">Profit Margin</div>
+        <div class="kpi-value">${profitMargin}%</div>
+        <div class="kpi-sub">This month</div>
+      </div>
+    </div>
+
+    <!-- Revenue vs Expense Bar -->
+    <div class="comparison">
+      <h3>Revenue vs Expense Comparison</h3>
+      <div class="bar-row">
+        <div class="bar-label"><span>Revenue</span><span style="color:#2563eb">₱${monthlyRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${revenueBarWidth}%;background:#2563eb"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label"><span>Expenses</span><span style="color:#dc2626">₱${monthlyExpenses.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${expenseBarWidth}%;background:#dc2626"></div></div>
+      </div>
+    </div>
+
+    <!-- Revenue by Event Type -->
+    <div class="section-header"><h2>Revenue by Event Type</h2><div class="line"></div></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Event Type</th>
+          <th class="center">Bookings</th>
+          <th class="right">Revenue</th>
+          <th class="right">Expenses</th>
+          <th class="right">Profit</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${eventTypeRows || `<tr><td colspan="5" class="no-data">No data for this period</td></tr>`}
+      </tbody>
+    </table>
+
+    <!-- Top Customers -->
+    <div class="section-header"><h2>Top Customers</h2><div class="line"></div></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th class="center">Bookings</th>
+          <th class="right">Total Spent</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${topCustomerRows || `<tr><td colspan="3" class="no-data">No customer data for this period</td></tr>`}
+      </tbody>
+    </table>
+
+    <!-- Summary Box -->
+    <div class="summary-box">
+      <div class="summary-item"><span>Confirmed Bookings</span><span>${monthlyConfirmedBookings.length}</span></div>
+      <div class="summary-item"><span>Avg Revenue / Booking</span><span>₱${monthlyConfirmedBookings.length > 0 ? (monthlyRevenue / monthlyConfirmedBookings.length).toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00'}</span></div>
+      <div class="summary-item"><span>Total Revenue (All Time)</span><span>₱${totalRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span></div>
+      <div class="summary-item"><span>Avg Expense / Booking</span><span>₱${monthlyConfirmedBookings.length > 0 ? (monthlyExpenses / monthlyConfirmedBookings.length).toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '0.00'}</span></div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div><strong>Event Cash Management System</strong> &nbsp;·&nbsp; Confidential Financial Report</div>
+    <div>Generated: ${format(new Date(), 'MMMM dd, yyyy hh:mm a')}</div>
+  </div>
+
+  <script>window.onload = () => { window.print(); }</script>
+</body>
+</html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
   };
 
-  // Export Report to Excel
-  const handleExportReportExcel = () => {
-    const reportTitle = activeReport === 'income-expenses' ? 'Income vs Expenses' : 
-                       activeReport === 'profitability' ? 'Profitability Analysis' :
-                       activeReport === 'budget' ? 'Budget vs Actual' : 'Cashflow Report';
+  // Export Report to Excel using ExcelJS
+  const handleExportReportExcel = async () => {
+    const ExcelJS = (await import('exceljs')).default;
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Event Cash Management System';
+    wb.created = new Date();
 
-    const csvContent = [
-      [reportTitle + ' Report'],
-      ['Month', format(selectedMonth, 'MMMM yyyy')],
-      ['Exported on', format(new Date(), 'MMMM dd, yyyy HH:mm:ss')],
-      [],
-      ['Financial Metrics', '', ''],
-      ['Monthly Revenue', monthlyRevenue.toLocaleString(), ''],
-      ['Total Expenses', monthlyExpenses.toLocaleString(), ''],
-      ['Net Profit', (monthlyRevenue - monthlyExpenses).toLocaleString(), ''],
-      ['Profit Margin %', monthlyRevenue > 0 ? (((monthlyRevenue - monthlyExpenses) / monthlyRevenue) * 100).toFixed(2) : 0, ''],
-      ['Number of Bookings', monthlyConfirmedBookings.length, ''],
-      [],
-      ['Summary', '', ''],
-      ['Total Confirmed Bookings', monthlyConfirmedBookings.length, ''],
-      ['Total Pending Bookings', monthlyPendingBookings.length, ''],
-      ['Total Completed Bookings', monthlyCompletedBookings.length, ''],
-    ]
-      .map((row) => row.map((cell) => `"${cell}"`).join(','))
-      .join('\n');
+    const monthLabel = format(selectedMonth, 'MMMM yyyy');
+    const profitMargin = monthlyRevenue > 0
+      ? (((monthlyRevenue - monthlyExpenses) / monthlyRevenue) * 100).toFixed(2)
+      : '0.00';
 
-    const element = document.createElement('a');
-    const file = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    element.href = URL.createObjectURL(file);
-    element.download = `${reportTitle.toLowerCase().replace(/\s+/g, '_')}_${format(selectedMonth, 'yyyy-MM-dd')}.xlsx`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+    // ── Colour palette ──────────────────────────────────────────────────────
+    const AMBER   = 'FFF59E0B';
+    const AMBER_L = 'FFFFF8E1';
+    const BLUE    = 'FF2563EB';
+    const BLUE_L  = 'FFEFF6FF';
+    const RED     = 'FFDC2626';
+    const RED_L   = 'FFFEF2F2';
+    const GREEN   = 'FF16A34A';
+    const GREEN_L = 'FFF0FDF4';
+    const PURPLE  = 'FF7C3AED';
+    const PURPLE_L= 'FFFAF5FF';
+    const GRAY_H  = 'FFF3F4F6';
+    const GRAY_B  = 'FFE5E7EB';
+    const WHITE   = 'FFFFFFFF';
+    const DARK    = 'FF111827';
+
+    const border = (color = 'FFD1D5DB'): Partial<ExcelJS.Borders> => ({
+      top:    { style: 'thin', color: { argb: color } },
+      bottom: { style: 'thin', color: { argb: color } },
+      left:   { style: 'thin', color: { argb: color } },
+      right:  { style: 'thin', color: { argb: color } },
+    });
+
+    const headerFont = (color = WHITE, size = 11): Partial<ExcelJS.Font> =>
+      ({ name: 'Calibri', bold: true, color: { argb: color }, size });
+
+    const bodyFont = (bold = false, color = DARK, size = 10): Partial<ExcelJS.Font> =>
+      ({ name: 'Calibri', bold, color: { argb: color }, size });
+
+    const php = (v: number) =>
+      `₱${v.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // SHEET 1 — Income vs Expenses
+    // ════════════════════════════════════════════════════════════════════════
+    const ws = wb.addWorksheet('Income vs Expenses', {
+      pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1 },
+    });
+
+    ws.columns = [
+      { key: 'a', width: 32 },
+      { key: 'b', width: 22 },
+      { key: 'c', width: 22 },
+      { key: 'd', width: 22 },
+      { key: 'e', width: 22 },
+    ];
+
+    // ── Title block ─────────────────────────────────────────────────────────
+    ws.mergeCells('A1:E1');
+    const titleCell = ws.getCell('A1');
+    titleCell.value = 'INCOME VS EXPENSES REPORT';
+    titleCell.font = headerFont(WHITE, 16);
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    titleCell.border = border(AMBER);
+    ws.getRow(1).height = 36;
+
+    ws.mergeCells('A2:E2');
+    const subCell = ws.getCell('A2');
+    subCell.value = `${monthLabel}  ·  Event Cash Management System  ·  Exported: ${format(new Date(), 'MMM dd, yyyy hh:mm a')}`;
+    subCell.font = bodyFont(false, 'FF92400E', 9);
+    subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3CD' } };
+    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    subCell.border = border('FFFCD34D');
+    ws.getRow(2).height = 18;
+
+    ws.addRow([]); // spacer
+
+    // ── KPI Section header ──────────────────────────────────────────────────
+    ws.mergeCells('A4:E4');
+    const kpiHeader = ws.getCell('A4');
+    kpiHeader.value = 'KEY FINANCIAL METRICS';
+    kpiHeader.font = headerFont(WHITE, 11);
+    kpiHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER } };
+    kpiHeader.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    kpiHeader.border = border(AMBER);
+    ws.getRow(4).height = 22;
+
+    // KPI rows
+    const kpis = [
+      { label: 'Monthly Revenue',  value: php(monthlyRevenue),  note: `${monthlyConfirmedBookings.length} booking(s)`, bg: BLUE_L,   accent: BLUE   },
+      { label: 'Monthly Expenses', value: php(monthlyExpenses), note: 'Sum of all costs',                              bg: RED_L,    accent: RED    },
+      { label: 'Net Profit',       value: php(monthlyProfit),   note: 'Revenue − Expenses',                            bg: GREEN_L,  accent: GREEN  },
+      { label: 'Profit Margin',    value: `${profitMargin}%`,   note: 'This month',                                    bg: PURPLE_L, accent: PURPLE },
+    ];
+
+    kpis.forEach(({ label, value, note, bg, accent }) => {
+      const r = ws.addRow([label, value, note, '', '']);
+      r.height = 24;
+      ['A','B','C','D','E'].forEach(col => {
+        const c = ws.getCell(`${col}${r.number}`);
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+        c.border = border(accent);
+      });
+      ws.getCell(`A${r.number}`).font = bodyFont(true, accent, 11);
+      ws.getCell(`A${r.number}`).alignment = { vertical: 'middle', indent: 1 };
+      ws.getCell(`B${r.number}`).font = bodyFont(true, DARK, 13);
+      ws.getCell(`B${r.number}`).alignment = { horizontal: 'right', vertical: 'middle' };
+      ws.getCell(`C${r.number}`).font = bodyFont(false, 'FF6B7280', 9);
+      ws.getCell(`C${r.number}`).alignment = { vertical: 'middle' };
+    });
+
+    ws.addRow([]); // spacer
+
+    // ── Event Type Breakdown ────────────────────────────────────────────────
+    ws.mergeCells(`A${ws.rowCount + 1}:E${ws.rowCount + 1}`);
+    const etHeader = ws.getCell(`A${ws.rowCount}`);
+    etHeader.value = 'REVENUE BY EVENT TYPE';
+    etHeader.font = headerFont(WHITE, 11);
+    etHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER } };
+    etHeader.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    etHeader.border = border(AMBER);
+    ws.getRow(ws.rowCount).height = 22;
+
+    const etColHeaders = ws.addRow(['Event Type', 'Bookings', 'Revenue', 'Expenses', 'Profit']);
+    etColHeaders.height = 20;
+    ['A','B','C','D','E'].forEach((col, i) => {
+      const c = ws.getCell(`${col}${etColHeaders.number}`);
+      c.font = headerFont('FF374151', 10);
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRAY_H } };
+      c.border = border(GRAY_B);
+      c.alignment = { horizontal: i === 0 ? 'left' : 'right', vertical: 'middle', indent: i === 0 ? 1 : 0 };
+    });
+
+    if (eventTypeBreakdown.length === 0) {
+      const noData = ws.addRow(['No data for this period', '', '', '', '']);
+      ws.mergeCells(`A${noData.number}:E${noData.number}`);
+      ws.getCell(`A${noData.number}`).font = bodyFont(false, 'FF9CA3AF', 10);
+      ws.getCell(`A${noData.number}`).alignment = { horizontal: 'center' };
+    } else {
+      eventTypeBreakdown.forEach((item, i) => {
+        const profit = item.revenue - item.expenses;
+        const r = ws.addRow([item.type, item.count, item.revenue, item.expenses, profit]);
+        r.height = 20;
+        const bg = i % 2 === 0 ? WHITE : GRAY_H;
+        ['A','B','C','D','E'].forEach(col => {
+          const c = ws.getCell(`${col}${r.number}`);
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+          c.border = border(GRAY_B);
+        });
+        ws.getCell(`A${r.number}`).font = bodyFont(true, DARK, 10);
+        ws.getCell(`A${r.number}`).alignment = { indent: 1 };
+        ws.getCell(`B${r.number}`).alignment = { horizontal: 'right' };
+        ws.getCell(`C${r.number}`).numFmt = '₱#,##0.00';
+        ws.getCell(`C${r.number}`).font = bodyFont(true, BLUE, 10);
+        ws.getCell(`C${r.number}`).alignment = { horizontal: 'right' };
+        ws.getCell(`D${r.number}`).numFmt = '₱#,##0.00';
+        ws.getCell(`D${r.number}`).font = bodyFont(true, RED, 10);
+        ws.getCell(`D${r.number}`).alignment = { horizontal: 'right' };
+        ws.getCell(`E${r.number}`).numFmt = '₱#,##0.00';
+        ws.getCell(`E${r.number}`).font = bodyFont(true, profit >= 0 ? GREEN : RED, 10);
+        ws.getCell(`E${r.number}`).alignment = { horizontal: 'right' };
+      });
+    }
+
+    ws.addRow([]); // spacer
+
+    // ── Top Customers ───────────────────────────────────────────────────────
+    ws.mergeCells(`A${ws.rowCount + 1}:E${ws.rowCount + 1}`);
+    const tcHeader = ws.getCell(`A${ws.rowCount}`);
+    tcHeader.value = 'TOP CUSTOMERS';
+    tcHeader.font = headerFont(WHITE, 11);
+    tcHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER } };
+    tcHeader.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    tcHeader.border = border(AMBER);
+    ws.getRow(ws.rowCount).height = 22;
+
+    const tcColHeaders = ws.addRow(['#', 'Customer Name', 'Bookings', 'Total Spent', '']);
+    tcColHeaders.height = 20;
+    ['A','B','C','D','E'].forEach((col, i) => {
+      const c = ws.getCell(`${col}${tcColHeaders.number}`);
+      c.font = headerFont('FF374151', 10);
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRAY_H } };
+      c.border = border(GRAY_B);
+      c.alignment = { horizontal: i <= 1 ? 'left' : 'right', vertical: 'middle', indent: i === 0 ? 1 : 0 };
+    });
+
+    if (topCustomers.length === 0) {
+      const noData = ws.addRow(['No customer data for this period', '', '', '', '']);
+      ws.mergeCells(`A${noData.number}:E${noData.number}`);
+      ws.getCell(`A${noData.number}`).font = bodyFont(false, 'FF9CA3AF', 10);
+      ws.getCell(`A${noData.number}`).alignment = { horizontal: 'center' };
+    } else {
+      topCustomers.forEach((c, i) => {
+        const r = ws.addRow([i + 1, c.name, c.bookings, c.totalSpent, '']);
+        r.height = 20;
+        const bg = i % 2 === 0 ? WHITE : GRAY_H;
+        ['A','B','C','D','E'].forEach(col => {
+          const cell = ws.getCell(`${col}${r.number}`);
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+          cell.border = border(GRAY_B);
+        });
+        ws.getCell(`A${r.number}`).font = bodyFont(true, AMBER, 10);
+        ws.getCell(`A${r.number}`).alignment = { horizontal: 'center' };
+        ws.getCell(`B${r.number}`).font = bodyFont(true, DARK, 10);
+        ws.getCell(`B${r.number}`).alignment = { indent: 1 };
+        ws.getCell(`C${r.number}`).alignment = { horizontal: 'right' };
+        ws.getCell(`D${r.number}`).numFmt = '₱#,##0.00';
+        ws.getCell(`D${r.number}`).font = bodyFont(true, AMBER, 10);
+        ws.getCell(`D${r.number}`).alignment = { horizontal: 'right' };
+      });
+    }
+
+    ws.addRow([]); // spacer
+
+    // ── Summary ─────────────────────────────────────────────────────────────
+    ws.mergeCells(`A${ws.rowCount + 1}:E${ws.rowCount + 1}`);
+    const sumHeader = ws.getCell(`A${ws.rowCount}`);
+    sumHeader.value = 'SUMMARY';
+    sumHeader.font = headerFont(WHITE, 11);
+    sumHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER } };
+    sumHeader.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    sumHeader.border = border(AMBER);
+    ws.getRow(ws.rowCount).height = 22;
+
+    const summaryRows = [
+      ['Confirmed/Completed Bookings (Month)', monthlyConfirmedBookings.length],
+      ['Pending Bookings (Month)', filteredBookings.filter(b => b.status === 'pending' && isWithinInterval(b.eventDate, { start: monthStart, end: monthEnd })).length],
+      ['Cancelled Bookings (Month)', filteredBookings.filter(b => b.status === 'cancelled' && isWithinInterval(b.eventDate, { start: monthStart, end: monthEnd })).length],
+      ['Avg Revenue / Booking', monthlyConfirmedBookings.length > 0 ? monthlyRevenue / monthlyConfirmedBookings.length : 0],
+      ['Avg Expense / Booking', monthlyConfirmedBookings.length > 0 ? monthlyExpenses / monthlyConfirmedBookings.length : 0],
+      ['All-Time Total Revenue', totalRevenue],
+      ['All-Time Total Expenses', totalExpenses],
+      ['All-Time Net Profit', totalProfit],
+    ];
+
+    summaryRows.forEach(([label, value], i) => {
+      const r = ws.addRow([label, value, '', '', '']);
+      r.height = 20;
+      ws.mergeCells(`B${r.number}:E${r.number}`);
+      const bg = i % 2 === 0 ? AMBER_L : WHITE;
+      ['A','B','C','D','E'].forEach(col => {
+        const c = ws.getCell(`${col}${r.number}`);
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+        c.border = border('FFFCD34D');
+      });
+      ws.getCell(`A${r.number}`).font = bodyFont(true, 'FF92400E', 10);
+      ws.getCell(`A${r.number}`).alignment = { indent: 1, vertical: 'middle' };
+      const valCell = ws.getCell(`B${r.number}`);
+      valCell.font = bodyFont(true, DARK, 11);
+      valCell.alignment = { horizontal: 'right', vertical: 'middle' };
+      if (typeof value === 'number' && (label as string).includes('Revenue') || (label as string).includes('Expense') || (label as string).includes('Profit') || (label as string).includes('Avg')) {
+        valCell.numFmt = '₱#,##0.00';
+      }
+    });
+
+    // ── Footer row ───────────────────────────────────────────────────────────
+    ws.addRow([]);
+    const footerRowNum = ws.rowCount + 1;
+    ws.mergeCells(`A${footerRowNum}:E${footerRowNum}`);
+    const footerCell = ws.getCell(`A${footerRowNum}`);
+    footerCell.value = `Event Cash Management System  ·  Confidential Financial Report  ·  ${format(new Date(), 'MMMM dd, yyyy')}`;
+    footerCell.font = bodyFont(false, 'FF9CA3AF', 9);
+    footerCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
+    footerCell.font = { ...footerCell.font, color: { argb: 'FF9CA3AF' } };
+    footerCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(footerRowNum).height = 18;
+
+    // ── Download ─────────────────────────────────────────────────────────────
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Income_vs_Expenses_${format(selectedMonth, 'yyyy-MM')}_${format(new Date(), 'yyyyMMdd')}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   if (loading || loadingData) {
@@ -1640,8 +2008,8 @@ export default function ManagerReports() {
                   </button>
                   <button
                     onClick={() => {
-                      window.print();
                       setShowFilterModal(false);
+                      handlePrintReport();
                     }}
                     className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
                   >
