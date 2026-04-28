@@ -134,8 +134,7 @@ export default function ManagerReports() {
       if (!isManager) return;
       try {
         const transactionsRef = collection(db, 'transactions');
-        const q = query(transactionsRef, where('managerId', '==', managerUser?.uid));
-        const snapshot = await getDocs(q);
+        const snapshot = await getDocs(transactionsRef);
         const transData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setTransactions(transData);
       } catch (error) {
@@ -176,8 +175,8 @@ export default function ManagerReports() {
 
   const cashflowData = getCashflowByMonth();
 
-  // Calculate metrics
-  const confirmedBookings = filteredBookings.filter(b => b.status === 'confirmed');
+  // Calculate metrics — include both confirmed and completed bookings for financial reporting
+  const confirmedBookings = filteredBookings.filter(b => b.status === 'confirmed' || b.status === 'completed');
 
   // Calculate profitability by week
   const getProfitabilityByWeek = () => {
@@ -283,8 +282,8 @@ export default function ManagerReports() {
 
   const totalProfit = totalRevenue - totalExpenses;
 
-  // Group by event type
-  const eventTypeBreakdown = confirmedBookings.reduce((acc, b) => {
+  // Group by event type (scoped to selected month)
+  const eventTypeBreakdown = monthlyConfirmedBookings.reduce((acc, b) => {
     const existing = acc.find(item => item.type === b.eventType);
     const expenseAmount = getExpenseAmount(b.expenses);
     if (existing) {
@@ -302,8 +301,8 @@ export default function ManagerReports() {
     return acc;
   }, [] as Array<{ type: string; count: number; revenue: number; expenses: number }>);
 
-  // Top customers
-  const topCustomers = confirmedBookings
+  // Top customers (scoped to selected month)
+  const topCustomers = monthlyConfirmedBookings
     .reduce((acc, b) => {
       const existing = acc.find(item => item.name === b.customerName);
       if (existing) {
@@ -884,11 +883,11 @@ export default function ManagerReports() {
             {/* Summary */}
             <div className="bg-gradient-to-br from-primary/10 to-yellow-600/10 rounded-xl p-6 shadow-lg border-2 border-primary/20">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Summary</h3>
-              <div className="space-y-3 text-sm">
-                <p><span className="font-semibold">Confirmed Bookings:</span> {confirmedBookings.length}</p>
+              <div className="space-y-3 text-sm text-black">
+                <p><span className="font-semibold">Confirmed Bookings:</span> {monthlyConfirmedBookings.length}</p>
                 <p><span className="font-semibold">This Month:</span> {monthlyConfirmedBookings.length}</p>
-                <p><span className="font-semibold">Avg Revenue/Booking:</span> ₱{confirmedBookings.length > 0 ? (totalRevenue / confirmedBookings.length).toFixed(0) : 0}.00</p>
-                <p><span className="font-semibold">Avg Expense/Booking:</span> ₱{confirmedBookings.length > 0 ? (totalExpenses / confirmedBookings.length).toFixed(0) : 0}.00</p>
+                <p><span className="font-semibold">Avg Revenue/Booking:</span> ₱{monthlyConfirmedBookings.length > 0 ? (monthlyRevenue / monthlyConfirmedBookings.length).toFixed(0) : 0}.00</p>
+                <p><span className="font-semibold">Avg Expense/Booking:</span> ₱{monthlyConfirmedBookings.length > 0 ? (monthlyExpenses / monthlyConfirmedBookings.length).toFixed(0) : 0}.00</p>
               </div>
             </div>
           </motion.div>

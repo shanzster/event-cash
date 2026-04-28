@@ -115,55 +115,52 @@ export async function generateSalesInvoice(
   };
 
   // ── Header ────────────────────────────────────────────────────────────────
-  // Taller header so left and right content don't overlap
-  const headerH = 48;
+  const headerH = 26;
   pdf.setFillColor(...orange);
   pdf.rect(0, 0, pageWidth, headerH, 'F');
   pdf.setFillColor(...gold);
-  pdf.rect(0, headerH - 3, pageWidth, 3, 'F');
+  pdf.rect(0, headerH - 2, pageWidth, 2, 'F');
 
   // Left side — business info
   pdf.setTextColor(...white);
-  pdf.setFontSize(18);                      // reduced from 26 to prevent overlap
+  pdf.setFontSize(11);
   pdf.setFont('helvetica', 'bold');
-  pdf.text(bizInfo.businessName, margin, 14);
+  pdf.text(bizInfo.businessName, margin, 9);
 
-  pdf.setFontSize(8);
+  pdf.setFontSize(7);
   pdf.setFont('helvetica', 'normal');
-  // Wrap address if long
-  const addrLines = pdf.splitTextToSize(bizInfo.address, 90);
-  pdf.text(addrLines, margin, 20);
-  const afterAddr = 20 + addrLines.length * 4;
-  pdf.text(`TIN: ${bizInfo.tinNumber}`, margin, afterAddr);
-  if (bizInfo.phone) pdf.text(`Tel: ${bizInfo.phone}`, margin, afterAddr + 5);
+  const addrLines = pdf.splitTextToSize(bizInfo.address, 95);
+  pdf.text(addrLines, margin, 14);
+  const afterAddr = 14 + addrLines.length * 3.5;
+  pdf.text(`TIN: ${bizInfo.tinNumber}${bizInfo.phone ? `  |  Tel: ${bizInfo.phone}` : ''}`, margin, afterAddr);
 
-  // Right side — document title (right-aligned, won't overlap left content)
-  pdf.setFontSize(16);
+  // Right side — document title
+  pdf.setFontSize(12);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('SALES INVOICE', pageWidth - margin, 14, { align: 'right' });
+  pdf.text('SALES INVOICE', pageWidth - margin, 9, { align: 'right' });
 
-  pdf.setFontSize(8);
+  pdf.setFontSize(7);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(invoiceDescriptions[invoiceType], pageWidth - margin, 21, { align: 'right' });
+  pdf.text(invoiceDescriptions[invoiceType], pageWidth - margin, 14, { align: 'right' });
 
-  y = headerH + 6;
+  y = headerH + 5;
 
   // ── Invoice Meta ──────────────────────────────────────────────────────────
   pdf.setFillColor(...light);
-  pdf.rect(margin, y, cw, 22, 'F');
+  pdf.rect(margin, y, cw, 18, 'F');
   pdf.setFillColor(...orange);
-  pdf.rect(margin, y, 3, 22, 'F');
+  pdf.rect(margin, y, 3, 18, 'F');
 
   pdf.setTextColor(...dark);
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'bold');
-  pdf.text(`Invoice No: ${invoiceNumber}`, margin + 6, y + 6);
+  pdf.text(`Invoice No: ${invoiceNumber}`, margin + 6, y + 5);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(`Date of Transaction: ${format(new Date(), 'MMMM dd, yyyy')}`, margin + 6, y + 12);
-  pdf.text(`Event Date: ${format(data.eventDate, 'MMMM dd, yyyy')}`, margin + 6, y + 18);
+  pdf.text(`Date of Transaction: ${format(new Date(), 'MMMM dd, yyyy')}`, margin + 6, y + 10);
+  pdf.text(`Event Date: ${format(data.eventDate, 'MMMM dd, yyyy')}`, margin + 6, y + 15);
 
   pdf.setFont('helvetica', 'bold');
-  pdf.text(`Booking ID: ${data.bookingId.substring(0, 14).toUpperCase()}`, pageWidth - margin - 5, y + 6, { align: 'right' });
+  pdf.text(`Booking ID: ${data.bookingId.substring(0, 14).toUpperCase()}`, pageWidth - margin - 5, y + 5, { align: 'right' });
 
   // Status badge
   const statusColors: Record<InvoiceType, [number, number, number]> = {
@@ -172,13 +169,13 @@ export async function generateSalesInvoice(
     full_payment:  [34,  197, 94],
   };
   pdf.setFillColor(...statusColors[invoiceType]);
-  pdf.roundedRect(pageWidth - margin - 40, y + 12, 40, 7, 2, 2, 'F');
+  pdf.roundedRect(pageWidth - margin - 40, y + 10, 40, 6, 2, 2, 'F');
   pdf.setTextColor(...white);
   pdf.setFontSize(7);
   pdf.setFont('helvetica', 'bold');
-  pdf.text(paymentStatuses[invoiceType], pageWidth - margin - 20, y + 17, { align: 'center' });
+  pdf.text(paymentStatuses[invoiceType], pageWidth - margin - 20, y + 14, { align: 'center' });
 
-  y += 28;
+  y += 23;
 
   // ── Customer Information ──────────────────────────────────────────────────
   pdf.setFillColor(...orange);
