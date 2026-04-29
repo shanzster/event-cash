@@ -212,7 +212,17 @@ export default function CMSPage() {
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
-        setContactInfo(docSnap.data() as ContactInfo);
+        const data = docSnap.data() as ContactInfo;
+        // Ensure show flags always have explicit boolean values (default true if missing)
+        setContactInfo({
+          ...data,
+          social: {
+            ...data.social,
+            showFacebook: data.social?.showFacebook !== false,
+            showInstagram: data.social?.showInstagram !== false,
+            showTwitter: data.social?.showTwitter !== false,
+          },
+        });
       }
     } catch (error) {
       console.error('Error fetching contact info:', error);
@@ -272,7 +282,17 @@ export default function CMSPage() {
     setSaving(true);
     try {
       const docRef = doc(db, 'settings', 'contact');
-      await setDoc(docRef, contactInfo);
+      // Explicitly set show flags as booleans so Firestore stores them (not undefined)
+      const dataToSave = {
+        ...contactInfo,
+        social: {
+          ...contactInfo.social,
+          showFacebook: contactInfo.social.showFacebook !== false,
+          showInstagram: contactInfo.social.showInstagram !== false,
+          showTwitter: contactInfo.social.showTwitter !== false,
+        },
+      };
+      await setDoc(docRef, dataToSave);
       alert('Contact information saved successfully!');
     } catch (error) {
       console.error('Error saving contact info:', error);
