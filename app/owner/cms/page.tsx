@@ -1472,7 +1472,6 @@ export default function CMSPage() {
                   <Award size={24} className="text-primary" />
                   Business Identity
                 </h2>
-                <p className="text-sm text-gray-500 mb-5">This information appears on all generated Sales Invoices and Official Receipts (BIR-compliant).</p>
 
                 <div className="space-y-4">
                   <div>

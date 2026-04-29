@@ -145,39 +145,201 @@ export default function StaffReportsPage() {
   const handlePrintReport = () => {
     const pw = window.open('', '', 'height=600,width=900');
     if (!pw) return;
-    const title = activeReport === 'income-expenses' ? 'Income vs Expenses' : activeReport === 'profitability' ? 'Profitability Analysis' : 'Budget Analysis';
-    pw.document.write(`<html><head><title>${title} Report</title>
-    <style>body{font-family:sans-serif;padding:40px}h1{border-bottom:3px solid #F59E0B;padding-bottom:10px}
-    .metric{display:inline-block;margin-right:30px;margin-bottom:20px}
-    .ml{font-size:12px;color:#6B7280;font-weight:600}.mv{font-size:18px;font-weight:700;margin-top:5px}
-    .footer{text-align:center;margin-top:40px;border-top:1px solid #eee;padding-top:20px;font-size:11px;color:#9CA3AF}</style></head>
-    <body><h1>${title} Report</h1>
-    <p>Month: ${format(selectedMonth,'MMMM yyyy')} &nbsp;|&nbsp; Printed: ${format(new Date(),'MMMM dd, yyyy HH:mm:ss')}</p>
-    <div style="margin-top:20px">
-      <div class="metric"><div class="ml">Monthly Revenue</div><div class="mv">₱${monthlyRevenue.toLocaleString()}.00</div></div>
-      <div class="metric"><div class="ml">Total Expenses</div><div class="mv">₱${monthlyExpenses.toLocaleString()}.00</div></div>
-      <div class="metric"><div class="ml">Net Profit</div><div class="mv">₱${monthlyProfit.toLocaleString()}.00</div></div>
-      <div class="metric"><div class="ml">Profit Margin</div><div class="mv">${monthlyRevenue > 0 ? (((monthlyRevenue - monthlyExpenses) / monthlyRevenue) * 100).toFixed(1) : 0}%</div></div>
-    </div>
-    <div class="footer"><p>© Event Cash Management System</p></div></body></html>`);
-    pw.document.close(); pw.focus();
+
+    const printed = format(new Date(), 'MMMM dd, yyyy HH:mm:ss');
+    const monthLabel = format(selectedMonth, 'MMMM yyyy');
+
+    let html = '';
+
+    if (activeReport === 'income-expenses') {
+      const profitMargin = monthlyRevenue > 0 ? (((monthlyRevenue - monthlyExpenses) / monthlyRevenue) * 100).toFixed(1) : '0.0';
+      html = `<html><head><title>Income vs Expenses Report</title>
+      <style>body{font-family:sans-serif;padding:40px}h1{border-bottom:3px solid #F59E0B;padding-bottom:10px}
+      .kpi{display:inline-block;margin-right:24px;margin-bottom:16px;padding:12px 16px;border:1px solid #e5e7eb;border-radius:8px;min-width:140px}
+      .kl{font-size:11px;color:#6B7280;font-weight:600;text-transform:uppercase}.kv{font-size:20px;font-weight:700;margin-top:4px}
+      table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#F59E0B;color:white;padding:10px;text-align:left}
+      td{padding:10px;border-bottom:1px solid #eee}
+      .footer{text-align:center;margin-top:40px;border-top:1px solid #eee;padding-top:20px;font-size:11px;color:#9CA3AF}</style></head>
+      <body><h1>Income vs Expenses Report</h1>
+      <p>Month: ${monthLabel} &nbsp;|&nbsp; Printed: ${printed}</p>
+      <div style="margin-top:20px">
+        <div class="kpi"><div class="kl">Monthly Revenue</div><div class="kv" style="color:#2563eb">₱${monthlyRevenue.toLocaleString()}.00</div></div>
+        <div class="kpi"><div class="kl">Monthly Expenses</div><div class="kv" style="color:#dc2626">₱${monthlyExpenses.toLocaleString()}.00</div></div>
+        <div class="kpi"><div class="kl">Net Profit</div><div class="kv" style="color:#16a34a">₱${monthlyProfit.toLocaleString()}.00</div></div>
+        <div class="kpi"><div class="kl">Profit Margin</div><div class="kv" style="color:#7c3aed">${profitMargin}%</div></div>
+      </div>
+      <h3 style="margin-top:24px">Revenue by Event Type</h3>
+      <table><thead><tr><th>Event Type</th><th>Count</th><th>Revenue</th><th>Net Profit</th></tr></thead><tbody>
+      ${eventTypeBreakdown.map(i => `<tr><td>${i.type}</td><td>${i.count}</td><td style="color:#2563eb">₱${i.revenue.toLocaleString()}.00</td><td style="color:#16a34a">₱${(i.revenue-i.expenses).toLocaleString()}.00</td></tr>`).join('')}
+      </tbody></table>
+      <h3 style="margin-top:24px">Top Customers</h3>
+      <table><thead><tr><th>Customer</th><th>Bookings</th><th>Total Spent</th></tr></thead><tbody>
+      ${topCustomers.map(c => `<tr><td>${c.name}</td><td>${c.bookings}</td><td style="color:#d97706">₱${c.totalSpent.toLocaleString()}.00</td></tr>`).join('')}
+      </tbody></table>
+      <div class="footer"><p>© Event Cash Management System</p></div></body></html>`;
+
+    } else if (activeReport === 'profitability') {
+      html = `<html><head><title>Profitability Analysis Report</title>
+      <style>body{font-family:sans-serif;padding:40px}h1{border-bottom:3px solid #F59E0B;padding-bottom:10px}
+      .kpi{display:inline-block;margin-right:24px;margin-bottom:16px;padding:12px 16px;border:1px solid #e5e7eb;border-radius:8px;min-width:140px}
+      .kl{font-size:11px;color:#6B7280;font-weight:600;text-transform:uppercase}.kv{font-size:20px;font-weight:700;margin-top:4px}
+      table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#F59E0B;color:white;padding:10px;text-align:left}
+      td{padding:10px;border-bottom:1px solid #eee}
+      .footer{text-align:center;margin-top:40px;border-top:1px solid #eee;padding-top:20px;font-size:11px;color:#9CA3AF}</style></head>
+      <body><h1>Profitability Analysis Report</h1>
+      <p>Month: ${monthLabel} &nbsp;|&nbsp; Printed: ${printed}</p>
+      <div style="margin-top:20px">
+        <div class="kpi"><div class="kl">Profit Margin</div><div class="kv" style="color:#16a34a">${monthlyRevenue > 0 ? ((monthlyProfit/monthlyRevenue)*100).toFixed(1) : 0}%</div></div>
+        <div class="kpi"><div class="kl">Monthly Profit</div><div class="kv" style="color:#16a34a">₱${monthlyProfit.toLocaleString()}.00</div></div>
+        <div class="kpi"><div class="kl">Total Revenue</div><div class="kv" style="color:#2563eb">₱${totalRevenue.toLocaleString()}.00</div></div>
+        <div class="kpi"><div class="kl">Total Expenses</div><div class="kv" style="color:#dc2626">₱${totalExpenses.toLocaleString()}.00</div></div>
+      </div>
+      <h3 style="margin-top:24px">Profitability by Booking</h3>
+      <table><thead><tr><th>Customer</th><th>Event Type</th><th>Date</th><th>Revenue</th><th>Expenses</th><th>Net Profit</th><th>Margin</th></tr></thead><tbody>
+      ${confirmedBookings.sort((a,b)=>new Date(b.eventDate).getTime()-new Date(a.eventDate).getTime()).map(b=>{
+        const rev=b.totalPrice-(b.discount||0);const exp=getExpenseAmount(b.expenses);const profit=rev-exp;
+        const margin=rev>0?((profit/rev)*100).toFixed(1):0;
+        return `<tr><td>${b.customerName}</td><td>${b.eventType}</td><td>${format(b.eventDate,'MMM dd, yyyy')}</td><td style="color:#2563eb">₱${rev.toLocaleString()}.00</td><td style="color:#dc2626">₱${exp.toLocaleString()}.00</td><td style="color:${profit>=0?'#16a34a':'#dc2626'}">₱${profit.toLocaleString()}.00</td><td style="color:${profit>=0?'#16a34a':'#dc2626'}">${margin}%</td></tr>`;
+      }).join('')}
+      </tbody></table>
+      <div class="footer"><p>© Event Cash Management System</p></div></body></html>`;
+
+    } else if (activeReport === 'budget') {
+      const totalBudgeted = confirmedBookings.reduce((s,b)=>s+(b.budget||0),0);
+      const variance = totalBudgeted - totalExpenses;
+      html = `<html><head><title>Budget Analysis Report</title>
+      <style>body{font-family:sans-serif;padding:40px}h1{border-bottom:3px solid #F59E0B;padding-bottom:10px}
+      .kpi{display:inline-block;margin-right:24px;margin-bottom:16px;padding:12px 16px;border:1px solid #e5e7eb;border-radius:8px;min-width:140px}
+      .kl{font-size:11px;color:#6B7280;font-weight:600;text-transform:uppercase}.kv{font-size:20px;font-weight:700;margin-top:4px}
+      table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#F59E0B;color:white;padding:10px;text-align:left}
+      td{padding:10px;border-bottom:1px solid #eee}
+      .footer{text-align:center;margin-top:40px;border-top:1px solid #eee;padding-top:20px;font-size:11px;color:#9CA3AF}</style></head>
+      <body><h1>Budget Analysis Report</h1>
+      <p>Month: ${monthLabel} &nbsp;|&nbsp; Printed: ${printed}</p>
+      <div style="margin-top:20px">
+        <div class="kpi"><div class="kl">Total Budgeted</div><div class="kv" style="color:#2563eb">₱${totalBudgeted.toLocaleString()}.00</div></div>
+        <div class="kpi"><div class="kl">Actual Expenses</div><div class="kv" style="color:#dc2626">₱${totalExpenses.toLocaleString()}.00</div></div>
+        <div class="kpi"><div class="kl">Variance</div><div class="kv" style="color:${variance>=0?'#16a34a':'#dc2626'}">${variance>=0?'+':''}₱${variance.toLocaleString()}.00</div></div>
+        <div class="kpi"><div class="kl">Over Budget</div><div class="kv" style="color:#ea580c">${confirmedBookings.filter(b=>b.budget&&getExpenseAmount(b.expenses)>b.budget).length}</div></div>
+      </div>
+      <h3 style="margin-top:24px">Budget Analysis by Event</h3>
+      <table><thead><tr><th>Customer</th><th>Event Type</th><th>Date</th><th>Budget</th><th>Actual</th><th>Variance</th><th>Status</th></tr></thead><tbody>
+      ${confirmedBookings.filter(b=>b.budget||getExpenseAmount(b.expenses)>0).sort((a,b)=>new Date(b.eventDate).getTime()-new Date(a.eventDate).getTime()).map(b=>{
+        const budget=b.budget||0;const exp=getExpenseAmount(b.expenses);const v=budget-exp;const over=budget>0&&exp>budget;
+        return `<tr><td>${b.customerName}</td><td>${b.eventType}</td><td>${format(b.eventDate,'MMM dd, yyyy')}</td><td>${budget>0?'₱'+budget.toLocaleString()+'.00':'—'}</td><td>₱${exp.toLocaleString()}.00</td><td style="color:${v>=0?'#16a34a':'#dc2626'};white-space:nowrap">${budget>0?(v>=0?'+':'-')+'₱'+Math.abs(v).toLocaleString()+'.00':'—'}</td><td><span style="padding:2px 8px;border-radius:4px;font-size:11px;background:${over?'#fee2e2':exp>budget*0.8?'#fef9c3':'#dcfce7'};color:${over?'#991b1b':exp>budget*0.8?'#854d0e':'#166534'}">${budget>0?(over?'Over':exp>budget*0.8?'At Risk':'On Track'):'No Budget'}</span></td></tr>`;
+      }).join('')}
+      </tbody></table>
+      <div class="footer"><p>© Event Cash Management System</p></div></body></html>`;
+
+    } else if (activeReport === 'cashflow') {
+      const totalInflow = transactions.reduce((s,t)=>s+(t.amount||0),0);
+      const totalOutflow = transactions.reduce((s,t)=>s+(t.totalExpenses||0),0);
+      const netCashflow = transactions.reduce((s,t)=>s+(t.profit||0),0);
+      html = `<html><head><title>Cashflow Report</title>
+      <style>body{font-family:sans-serif;padding:40px}h1{border-bottom:3px solid #F59E0B;padding-bottom:10px}
+      .kpi{display:inline-block;margin-right:24px;margin-bottom:16px;padding:12px 16px;border:1px solid #e5e7eb;border-radius:8px;min-width:140px}
+      .kl{font-size:11px;color:#6B7280;font-weight:600;text-transform:uppercase}.kv{font-size:20px;font-weight:700;margin-top:4px}
+      table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#F59E0B;color:white;padding:10px;text-align:left}
+      td{padding:10px;border-bottom:1px solid #eee}
+      .footer{text-align:center;margin-top:40px;border-top:1px solid #eee;padding-top:20px;font-size:11px;color:#9CA3AF}</style></head>
+      <body><h1>Cashflow Report</h1>
+      <p>Printed: ${printed}</p>
+      <div style="margin-top:20px">
+        <div class="kpi"><div class="kl">Total Inflow</div><div class="kv" style="color:#16a34a">₱${totalInflow.toLocaleString()}.00</div></div>
+        <div class="kpi"><div class="kl">Total Outflow</div><div class="kv" style="color:#dc2626">₱${totalOutflow.toLocaleString()}.00</div></div>
+        <div class="kpi"><div class="kl">Net Cashflow</div><div class="kv" style="color:#2563eb">₱${netCashflow.toLocaleString()}.00</div></div>
+      </div>
+      <h3 style="margin-top:24px">Cashflow by Month</h3>
+      <table><thead><tr><th>Month</th><th>Inflow</th><th>Outflow</th><th>Net Cashflow</th><th>Transactions</th></tr></thead><tbody>
+      ${cashflowData.map((m:any)=>`<tr><td>${format(new Date(m.month+'-01'),'MMMM yyyy')}</td><td style="color:#16a34a">₱${m.income.toLocaleString()}.00</td><td style="color:#dc2626">₱${m.expenses.toLocaleString()}.00</td><td style="color:${m.profit>=0?'#2563eb':'#dc2626'}">₱${m.profit.toLocaleString()}.00</td><td>${m.transactions.length}</td></tr>`).join('')}
+      ${cashflowData.length===0?'<tr><td colspan="5" style="text-align:center;color:#9ca3af">No transaction data yet</td></tr>':''}
+      </tbody></table>
+      <h3 style="margin-top:24px">All Transactions</h3>
+      <table><thead><tr><th>Customer</th><th>Event Type</th><th>Inflow</th><th>Outflow</th><th>Net Cashflow</th><th>Date</th></tr></thead><tbody>
+      ${transactions.map((t:any)=>`<tr><td>${t.customerName||'—'}</td><td>${t.eventType||'—'}</td><td style="color:#16a34a">₱${(t.amount||0).toLocaleString()}.00</td><td style="color:#dc2626">₱${(t.totalExpenses||0).toLocaleString()}.00</td><td style="color:${(t.profit||0)>=0?'#2563eb':'#dc2626'}">₱${(t.profit||0).toLocaleString()}.00</td><td>${t.completedAt?(t.completedAt?.toDate?format(t.completedAt.toDate(),'MMM dd, yyyy'):format(new Date(t.completedAt),'MMM dd, yyyy')):'—'}</td></tr>`).join('')}
+      ${transactions.length===0?'<tr><td colspan="6" style="text-align:center;color:#9ca3af">No transactions yet</td></tr>':''}
+      </tbody></table>
+      <div class="footer"><p>© Event Cash Management System</p></div></body></html>`;
+    }
+
+    pw.document.write(html);
+    pw.document.close();
+    pw.focus();
     setTimeout(() => { pw.print(); pw.close(); }, 250);
   };
 
   const handleExportReportExcel = () => {
-    const title = activeReport === 'income-expenses' ? 'Income vs Expenses' : activeReport === 'profitability' ? 'Profitability Analysis' : 'Budget Analysis';
-    const rows = [
-      [title + ' Report'], ['Month', format(selectedMonth, 'MMMM yyyy')],
-      ['Exported on', format(new Date(), 'MMMM dd, yyyy HH:mm:ss')], [],
-      ['Monthly Revenue', monthlyRevenue.toLocaleString()],
-      ['Total Expenses', monthlyExpenses.toLocaleString()],
-      ['Net Profit', monthlyProfit.toLocaleString()],
-      ['Profit Margin %', monthlyRevenue > 0 ? (((monthlyRevenue - monthlyExpenses) / monthlyRevenue) * 100).toFixed(2) : 0],
-      ['Number of Bookings', monthlyConfirmedBookings.length],
-    ].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const monthLabel = format(selectedMonth, 'MMMM yyyy');
+    const printed = format(new Date(), 'MMMM dd, yyyy HH:mm:ss');
+    let rows: string[][] = [];
+    let filename = '';
+
+    if (activeReport === 'income-expenses') {
+      filename = `income_vs_expenses_${format(selectedMonth,'yyyy-MM')}.csv`;
+      rows = [
+        ['Income vs Expenses Report'], ['Month', monthLabel], ['Exported on', printed], [],
+        ['Monthly Revenue', `₱${monthlyRevenue.toLocaleString()}.00`],
+        ['Monthly Expenses', `₱${monthlyExpenses.toLocaleString()}.00`],
+        ['Net Profit', `₱${monthlyProfit.toLocaleString()}.00`],
+        ['Profit Margin %', monthlyRevenue > 0 ? `${(((monthlyRevenue-monthlyExpenses)/monthlyRevenue)*100).toFixed(2)}%` : '0%'],
+        ['Bookings This Month', String(monthlyConfirmedBookings.length)], [],
+        ['Event Type', 'Count', 'Revenue', 'Net Profit'],
+        ...eventTypeBreakdown.map(i => [i.type, String(i.count), `₱${i.revenue.toLocaleString()}.00`, `₱${(i.revenue-i.expenses).toLocaleString()}.00`]),
+      ];
+    } else if (activeReport === 'profitability') {
+      filename = `profitability_${format(selectedMonth,'yyyy-MM')}.csv`;
+      rows = [
+        ['Profitability Analysis Report'], ['Month', monthLabel], ['Exported on', printed], [],
+        ['Profit Margin', monthlyRevenue > 0 ? `${((monthlyProfit/monthlyRevenue)*100).toFixed(2)}%` : '0%'],
+        ['Monthly Profit', `₱${monthlyProfit.toLocaleString()}.00`],
+        ['Total Revenue (All Time)', `₱${totalRevenue.toLocaleString()}.00`],
+        ['Total Expenses (All Time)', `₱${totalExpenses.toLocaleString()}.00`],
+        ['Net Profit (All Time)', `₱${totalProfit.toLocaleString()}.00`], [],
+        ['Customer', 'Event Type', 'Date', 'Revenue', 'Expenses', 'Net Profit', 'Margin %'],
+        ...confirmedBookings.sort((a,b)=>new Date(b.eventDate).getTime()-new Date(a.eventDate).getTime()).map(b => {
+          const rev=b.totalPrice-(b.discount||0);const exp=getExpenseAmount(b.expenses);const profit=rev-exp;
+          return [b.customerName, b.eventType, format(b.eventDate,'MMM dd, yyyy'), `₱${rev.toLocaleString()}.00`, `₱${exp.toLocaleString()}.00`, `₱${profit.toLocaleString()}.00`, rev>0?`${((profit/rev)*100).toFixed(1)}%`:'0%'];
+        }),
+      ];
+    } else if (activeReport === 'budget') {
+      filename = `budget_analysis_${format(selectedMonth,'yyyy-MM')}.csv`;
+      const totalBudgeted = confirmedBookings.reduce((s,b)=>s+(b.budget||0),0);
+      rows = [
+        ['Budget Analysis Report'], ['Month', monthLabel], ['Exported on', printed], [],
+        ['Total Budgeted', `₱${totalBudgeted.toLocaleString()}.00`],
+        ['Total Actual Expenses', `₱${totalExpenses.toLocaleString()}.00`],
+        ['Variance', `₱${(totalBudgeted-totalExpenses).toLocaleString()}.00`],
+        ['Events Over Budget', String(confirmedBookings.filter(b=>b.budget&&getExpenseAmount(b.expenses)>b.budget).length)], [],
+        ['Customer', 'Event Type', 'Date', 'Budget', 'Actual Expenses', 'Variance', 'Status'],
+        ...confirmedBookings.filter(b=>b.budget||getExpenseAmount(b.expenses)>0).sort((a,b)=>new Date(b.eventDate).getTime()-new Date(a.eventDate).getTime()).map(b => {
+          const budget=b.budget||0;const exp=getExpenseAmount(b.expenses);const v=budget-exp;const over=budget>0&&exp>budget;
+          return [b.customerName, b.eventType, format(b.eventDate,'MMM dd, yyyy'), budget>0?`₱${budget.toLocaleString()}.00`:'—', `₱${exp.toLocaleString()}.00`, budget>0?`₱${v.toLocaleString()}.00`:'—', budget>0?(over?'Over':exp>budget*0.8?'At Risk':'On Track'):'No Budget'];
+        }),
+      ];
+    } else if (activeReport === 'cashflow') {
+      filename = `cashflow_${format(selectedMonth,'yyyy-MM')}.csv`;
+      const totalInflow = transactions.reduce((s:number,t:any)=>s+(t.amount||0),0);
+      const totalOutflow = transactions.reduce((s:number,t:any)=>s+(t.totalExpenses||0),0);
+      const netCashflow = transactions.reduce((s:number,t:any)=>s+(t.profit||0),0);
+      rows = [
+        ['Cashflow Report'], ['Exported on', printed], [],
+        ['Total Inflow', `₱${totalInflow.toLocaleString()}.00`],
+        ['Total Outflow', `₱${totalOutflow.toLocaleString()}.00`],
+        ['Net Cashflow', `₱${netCashflow.toLocaleString()}.00`], [],
+        ['Month', 'Inflow', 'Outflow', 'Net Cashflow', 'Transactions'],
+        ...cashflowData.map((m:any) => [format(new Date(m.month+'-01'),'MMMM yyyy'), `₱${m.income.toLocaleString()}.00`, `₱${m.expenses.toLocaleString()}.00`, `₱${m.profit.toLocaleString()}.00`, String(m.transactions.length)]),
+        [],
+        ['Customer', 'Event Type', 'Inflow', 'Outflow', 'Net Cashflow', 'Date'],
+        ...transactions.map((t:any) => [t.customerName||'—', t.eventType||'—', `₱${(t.amount||0).toLocaleString()}.00`, `₱${(t.totalExpenses||0).toLocaleString()}.00`, `₱${(t.profit||0).toLocaleString()}.00`, t.completedAt?(t.completedAt?.toDate?format(t.completedAt.toDate(),'MMM dd, yyyy'):format(new Date(t.completedAt),'MMM dd, yyyy')):'—']),
+      ];
+    }
+
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([rows], { type: 'text/csv' }));
-    a.download = `${title.toLowerCase().replace(/\s+/g,'_')}_${format(selectedMonth,'yyyy-MM')}.csv`;
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
@@ -394,7 +556,7 @@ export default function StaffReportsPage() {
                         <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Event Type</th>
                         <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Count</th>
                         <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Revenue</th>
-                        <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Net Profit</th>
+                        <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Net Cashflow</th>
                       </tr></thead>
                       <tbody>
                         {eventTypeBreakdown.map((item, i) => (
@@ -504,8 +666,8 @@ export default function StaffReportsPage() {
                       <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Customer / Event</th>
                       <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Date</th>
                       <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Revenue</th>
-                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Expenses</th>
-                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Net Profit</th>
+                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Outflow</th>
+                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Net Cashflow</th>
                       <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Margin %</th>
                       <th className="px-6 py-3 text-center text-sm font-bold text-gray-900">Status</th>
                     </tr></thead>
@@ -653,9 +815,9 @@ export default function StaffReportsPage() {
                   <table className="w-full">
                     <thead><tr className="bg-gray-100 border-b border-gray-200">
                       <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Month</th>
-                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Income</th>
-                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Expenses</th>
-                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Net Profit</th>
+                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Inflow</th>
+                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Outflow</th>
+                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Net Cashflow</th>
                       <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Transactions</th>
                     </tr></thead>
                     <tbody>
@@ -687,9 +849,9 @@ export default function StaffReportsPage() {
                       <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Booking ID</th>
                       <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Customer</th>
                       <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Event Type</th>
-                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Income</th>
-                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Expenses</th>
-                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Net Profit</th>
+                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Inflow</th>
+                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Outflow</th>
+                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Net Cashflow</th>
                       <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Date</th>
                     </tr></thead>
                     <tbody>

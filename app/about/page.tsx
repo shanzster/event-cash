@@ -514,25 +514,25 @@ export default function About() {
                   name: 'Kynna',
                   role: 'Full Stack Developer',
                   desc: 'Kynna is a visionary full-stack developer who led the overall architecture and core functionality of Event Cash. With expertise in modern web technologies, Kynna ensures the platform is scalable, secure, and user-friendly.',
-                  image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
+                  image: '/kynna.png',
                 },
                 {
-                  name: 'Rose Ann',
+                  name: 'Rose Anne',
                   role: 'Frontend Developer & UX Designer',
-                  desc: 'Rose Ann crafted the beautiful and intuitive user interface you see today. Her focus on user experience and design excellence makes Event Cash a pleasure to use for both customers and administrators.',
-                  image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
+                  desc: 'Rose Anne crafted the beautiful and intuitive user interface you see today. Her focus on user experience and design excellence makes Event Cash a pleasure to use for both customers and administrators.',
+                  image: '/rose.jpg',
                 },
                 {
                   name: 'Glynnes',
                   role: 'Backend Developer',
                   desc: 'Glynnes is the backbone of Event Cash\'s server infrastructure. Specializing in database design and API development, Glynnes ensures that all data is handled securely and efficiently behind the scenes.',
-                  image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
+                  image: '/glynne.jpg',
                 },
                 {
                   name: 'Carlo',
                   role: 'DevOps & QA Engineer',
                   desc: 'Carlo keeps Event Cash running smoothly across all environments. With expertise in deployment, testing, and system optimization, Carlo ensures the platform is reliable and performs flawlessly for all users.',
-                  image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&q=80',
+                  image: '/carlo.jpg',
                 },
               ].map((dev, index) => (
                 <motion.div
@@ -547,11 +547,11 @@ export default function About() {
                     whileHover={{ scale: 1.02 }}
                     className="overflow-hidden rounded-3xl shadow-xl mb-6"
                   >
-                    <div className="relative h-96 overflow-hidden">
+                    <div className="relative h-96 overflow-hidden bg-white">
                       <img
                         src={dev.image}
                         alt={dev.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                       <div className="absolute bottom-0 left-0 right-0 p-6">
@@ -585,7 +585,7 @@ export default function About() {
               <div className="backdrop-blur-xl bg-gradient-to-br from-primary/10 to-yellow-600/10 border-2 border-primary/30 rounded-3xl p-12 shadow-lg max-w-3xl mx-auto">
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">Passion for Innovation</h3>
                 <p className="text-gray-700 text-lg leading-relaxed">
-                  Together, Kynna, Rose Ann, Glynnes, and Carlo are committed to building the best event management platform. Their collaborative approach, attention to detail, and passion for technology make Event Cash the industry-leading solution for modern event planning and catering services.
+                  Together, Kynna, Rose Anne, Glynnes, and Carlo are committed to building the best event management platform. Their collaborative approach, attention to detail, and passion for technology make Event Cash the industry-leading solution for modern event planning and catering services.
                 </p>
               </div>
             </motion.div>
