@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { motion } from 'framer-motion';
-import { MapPin, Phone, Mail, Clock, Car, Train } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -276,88 +276,6 @@ export default function Location() {
           </div>
         </section>
 
-        {/* Directions Section */}
-        <section className="py-20 px-4 sm:px-6 bg-gradient-to-b from-white via-primary/5 to-white">
-          <div className="max-w-4xl mx-auto">
-            <motion.h2 
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-3xl sm:text-4xl font-bold mb-12 text-center bg-gradient-to-r from-primary via-yellow-600 to-primary bg-clip-text text-transparent"
-            >
-              Directions & Parking
-            </motion.h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* By Car */}
-              <motion.div 
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.1 }}
-                whileHover={{ y: -10, scale: 1.02 }}
-                className="backdrop-blur-xl bg-white/80 border-2 border-primary/30 rounded-3xl p-8 shadow-lg"
-              >
-                <motion.div 
-                  whileHover={{ rotate: 360, scale: 1.2 }}
-                  transition={{ duration: 0.6 }}
-                  className="w-14 h-14 bg-gradient-to-br from-primary to-yellow-600 rounded-xl flex items-center justify-center mb-6 shadow-xl"
-                >
-                  <Car size={28} className="text-white" />
-                </motion.div>
-                <h3 className="text-xl font-bold mb-4 text-gray-900">By Car</h3>
-                <p className="text-gray-700 mb-6 leading-relaxed">
-                  Our location is easily accessible from the main highway. Turn right at the 
-                  traffic light and continue for 2 blocks. Free parking is available in our 
-                  dedicated lot.
-                </p>
-                <motion.a
-                  href="https://maps.google.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="inline-block px-6 py-3 bg-gradient-to-r from-primary to-yellow-600 text-white rounded-xl font-semibold shadow-lg"
-                >
-                  Get Directions
-                </motion.a>
-              </motion.div>
-
-              {/* By Public Transit */}
-              <motion.div 
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 }}
-                whileHover={{ y: -10, scale: 1.02 }}
-                className="backdrop-blur-xl bg-white/80 border-2 border-primary/30 rounded-3xl p-8 shadow-lg"
-              >
-                <motion.div 
-                  whileHover={{ rotate: 360, scale: 1.2 }}
-                  transition={{ duration: 0.6 }}
-                  className="w-14 h-14 bg-gradient-to-br from-yellow-600 to-primary rounded-xl flex items-center justify-center mb-6 shadow-xl"
-                >
-                  <Train size={28} className="text-white" />
-                </motion.div>
-                <h3 className="text-xl font-bold mb-4 text-gray-900">By Public Transit</h3>
-                <p className="text-gray-700 mb-6 leading-relaxed">
-                  Our office is just a 5-minute walk from the downtown metro station. 
-                  Take the Red Line to Culinary Station and exit north. Our building 
-                  is directly across the street.
-                </p>
-                <motion.a
-                  href="#"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="inline-block px-6 py-3 bg-gradient-to-r from-yellow-600 to-primary text-white rounded-xl font-semibold shadow-lg"
-                >
-                  Transit Info
-                </motion.a>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
         {/* Why Choose Our Location */}
         <section className="py-20 px-4 sm:px-6">
           <div className="max-w-4xl mx-auto text-center">
@@ -373,7 +291,6 @@ export default function Location() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
                 { title: 'Central Location', desc: 'Easy access from all parts of the city', gradient: 'from-primary to-yellow-600' },
-                { title: 'Ample Parking', desc: 'Dedicated parking lot with plenty of spaces', gradient: 'from-yellow-600 to-primary' },
                 { title: 'Modern Facilities', desc: 'State-of-the-art kitchen and meeting spaces', gradient: 'from-primary to-yellow-600' },
               ].map((item, idx) => (
                 <motion.div 

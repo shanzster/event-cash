@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Save, Phone, Mail, MapPin, Clock, Facebook, Instagram, Twitter, Home, Award, Users, Heart, Plus, Edit2, Trash2, X, Upload } from 'lucide-react';
+import { Save, Phone, Mail, MapPin, Clock, Facebook, Instagram, Twitter, Home, Award, Users, Heart, Plus, Edit2, Trash2, X, Upload, FileText } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useManager } from '@/contexts/ManagerContext';
@@ -29,6 +29,9 @@ interface ContactInfo {
     facebook: string;
     instagram: string;
     twitter: string;
+    showFacebook?: boolean;
+    showInstagram?: boolean;
+    showTwitter?: boolean;
   };
   mapUrl?: string;
 }
@@ -105,6 +108,9 @@ export default function CMSPage() {
       facebook: '',
       instagram: '',
       twitter: '',
+      showFacebook: true,
+      showInstagram: true,
+      showTwitter: true,
     },
     mapUrl: '',
   });
@@ -279,8 +285,12 @@ export default function CMSPage() {
   const handleSaveContent = async () => {
     setSaving(true);
     try {
+      // Save homepage content
       const docRef = doc(db, 'cms', 'content');
       await setDoc(docRef, { home: homeContent }, { merge: true });
+      // Also save social links (stored in contact settings)
+      const contactRef = doc(db, 'settings', 'contact');
+      await setDoc(contactRef, contactInfo, { merge: true });
       alert('Content saved successfully!');
     } catch (error) {
       console.error('Error saving content:', error);
@@ -852,8 +862,7 @@ export default function CMSPage() {
                 transition={{ delay: 0.3 }}
                 className="bg-white rounded-xl shadow-lg p-6"
               >
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Call-to-Action Section</h2>
-                
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Call-to-Action Section</h2>                
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -886,6 +895,7 @@ export default function CMSPage() {
                   </div>
                 </div>
               </motion.div>
+
             </div>
           )}
 
@@ -1148,18 +1158,37 @@ export default function CMSPage() {
                 <Facebook size={24} className="text-primary" />
                 Social Media Links
               </h2>
-              
+              <p className="text-sm text-gray-500 mb-5">Check the box next to each platform to show it on the website. Uncheck to hide it.</p>
+
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <Facebook size={18} />
-                    Facebook URL
-                  </label>
+                {/* Facebook */}
+                <div className="border-2 border-gray-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Facebook size={18} className="text-white" />
+                    </div>
+                    <span className="font-semibold text-gray-900">Facebook</span>
+                    <div className="ml-auto flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="show-facebook"
+                        checked={contactInfo.social.showFacebook !== false}
+                        onChange={(e) => setContactInfo({
+                          ...contactInfo,
+                          social: { ...contactInfo.social, showFacebook: e.target.checked }
+                        })}
+                        className="w-4 h-4 accent-blue-600 cursor-pointer"
+                      />
+                      <label htmlFor="show-facebook" className="text-sm font-semibold text-gray-600 cursor-pointer select-none">
+                        Show on website
+                      </label>
+                    </div>
+                  </div>
                   <input
                     type="url"
                     value={contactInfo.social.facebook}
-                    onChange={(e) => setContactInfo({ 
-                      ...contactInfo, 
+                    onChange={(e) => setContactInfo({
+                      ...contactInfo,
                       social: { ...contactInfo.social, facebook: e.target.value }
                     })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
@@ -1167,16 +1196,34 @@ export default function CMSPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <Instagram size={18} />
-                    Instagram URL
-                  </label>
+                {/* Instagram */}
+                <div className="border-2 border-gray-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Instagram size={18} className="text-white" />
+                    </div>
+                    <span className="font-semibold text-gray-900">Instagram</span>
+                    <div className="ml-auto flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="show-instagram"
+                        checked={contactInfo.social.showInstagram !== false}
+                        onChange={(e) => setContactInfo({
+                          ...contactInfo,
+                          social: { ...contactInfo.social, showInstagram: e.target.checked }
+                        })}
+                        className="w-4 h-4 accent-pink-600 cursor-pointer"
+                      />
+                      <label htmlFor="show-instagram" className="text-sm font-semibold text-gray-600 cursor-pointer select-none">
+                        Show on website
+                      </label>
+                    </div>
+                  </div>
                   <input
                     type="url"
                     value={contactInfo.social.instagram}
-                    onChange={(e) => setContactInfo({ 
-                      ...contactInfo, 
+                    onChange={(e) => setContactInfo({
+                      ...contactInfo,
                       social: { ...contactInfo.social, instagram: e.target.value }
                     })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
@@ -1184,16 +1231,34 @@ export default function CMSPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <Twitter size={18} />
-                    Twitter URL
-                  </label>
+                {/* Twitter */}
+                <div className="border-2 border-gray-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 bg-sky-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Twitter size={18} className="text-white" />
+                    </div>
+                    <span className="font-semibold text-gray-900">Twitter / X</span>
+                    <div className="ml-auto flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="show-twitter"
+                        checked={contactInfo.social.showTwitter !== false}
+                        onChange={(e) => setContactInfo({
+                          ...contactInfo,
+                          social: { ...contactInfo.social, showTwitter: e.target.checked }
+                        })}
+                        className="w-4 h-4 accent-sky-500 cursor-pointer"
+                      />
+                      <label htmlFor="show-twitter" className="text-sm font-semibold text-gray-600 cursor-pointer select-none">
+                        Show on website
+                      </label>
+                    </div>
+                  </div>
                   <input
                     type="url"
                     value={contactInfo.social.twitter}
-                    onChange={(e) => setContactInfo({ 
-                      ...contactInfo, 
+                    onChange={(e) => setContactInfo({
+                      ...contactInfo,
                       social: { ...contactInfo.social, twitter: e.target.value }
                     })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
@@ -1372,6 +1437,138 @@ export default function CMSPage() {
               )}
             </div>
           )}
+
+          {/* Business Info Tab */}
+          {activeTab === 'business' && (
+            <div className="space-y-6">
+
+              {/* Business Name & TIN */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-xl shadow-lg p-6"
+              >
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Award size={24} className="text-primary" />
+                  Business Identity
+                </h2>
+                <p className="text-sm text-gray-500 mb-5">This information appears on all generated Sales Invoices and Official Receipts (BIR-compliant).</p>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Business Name
+                    </label>
+                    <input
+                      type="text"
+                      value={businessInfo.businessName}
+                      onChange={e => setBusinessInfo(prev => ({ ...prev, businessName: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
+                      placeholder="EventCash Catering Services"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      TIN Number
+                    </label>
+                    <input
+                      type="text"
+                      value={businessInfo.tinNumber}
+                      onChange={e => setBusinessInfo(prev => ({ ...prev, tinNumber: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
+                      placeholder="000-000-000-000"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Contact Details */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-white rounded-xl shadow-lg p-6"
+              >
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Phone size={24} className="text-primary" />
+                  Contact Details
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={businessInfo.email}
+                      onChange={e => setBusinessInfo(prev => ({ ...prev, email: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
+                      placeholder="info@eventcash.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={businessInfo.phone}
+                      onChange={e => setBusinessInfo(prev => ({ ...prev, phone: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
+                      placeholder="(123) 456-7890"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Business Address */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white rounded-xl shadow-lg p-6"
+              >
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <MapPin size={24} className="text-primary" />
+                  Business Address
+                </h2>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Full Address
+                  </label>
+                  <textarea
+                    value={businessInfo.address}
+                    onChange={e => setBusinessInfo(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
+                    placeholder="123 Main Street, Barangay, City, Province 00000"
+                    rows={3}
+                  />
+                </div>
+              </motion.div>
+
+              {/* Save Button */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="flex justify-end"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleSaveBusiness}
+                  disabled={savingBusiness}
+                  className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold shadow-xl disabled:opacity-50"
+                >
+                  <Save size={20} />
+                  {savingBusiness ? 'Saving...' : 'Save Business Info'}
+                </motion.button>
+              </motion.div>
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -1595,46 +1792,6 @@ export default function CMSPage() {
           </motion.div>
         </div>
       )}
-          {/* Business Info Tab */}
-          {activeTab === 'business' && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Business Information</h2>
-              <p className="text-gray-600 mb-6 text-sm">This information appears on all generated Sales Invoices (BIR-compliant).</p>
-              <div className="space-y-4">
-                {[
-                  { label: 'Business Name', key: 'businessName', placeholder: 'EventCash Catering Services' },
-                  { label: 'Address', key: 'address', placeholder: '123 Main Street, City, State 00000' },
-                  { label: 'TIN Number', key: 'tinNumber', placeholder: '000-000-000-000' },
-                  { label: 'Email', key: 'email', placeholder: 'info@eventcash.com' },
-                  { label: 'Phone', key: 'phone', placeholder: '(123) 456-7890' },
-                ].map(({ label, key, placeholder }) => (
-                  <div key={key}>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-                    <input
-                      type="text"
-                      value={(businessInfo as any)[key]}
-                      onChange={e => setBusinessInfo(prev => ({ ...prev, [key]: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
-                      placeholder={placeholder}
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 flex justify-end">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleSaveBusiness}
-                  disabled={savingBusiness}
-                  className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold shadow-xl disabled:opacity-50"
-                >
-                  <Save size={20} />
-                  {savingBusiness ? 'Saving...' : 'Save Business Info'}
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-
     </ManagerSidebar>
   );
 }

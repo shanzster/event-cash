@@ -414,7 +414,7 @@ export default function ManagerAccounting() {
               font-weight: 600;
               color: #1F2937;
             }
-            .income-badge {
+            .inflow-badge {
               background-color: #DCFCE7;
               color: #166534;
               padding: 6px 12px;
@@ -423,7 +423,7 @@ export default function ManagerAccounting() {
               font-size: 11px;
               display: inline-block;
             }
-            .expense-badge {
+            .outflow-badge {
               background-color: #FEE2E2;
               color: #991B1B;
               padding: 6px 12px;
@@ -506,8 +506,8 @@ export default function ManagerAccounting() {
                     ${e.type === 'income' ? '+' : '-'}₱${e.amount.toLocaleString()}.00
                   </td>
                   <td class="text-center">
-                    <span class="${e.type === 'income' ? 'income-badge' : 'expense-badge'}">
-                      ${e.type === 'income' ? 'Income' : 'Expense'}
+                    <span class="${e.type === 'income' ? 'inflow-badge' : 'outflow-badge'}">
+                      ${e.type === 'income' ? 'Inflow' : 'Outflow'}
                     </span>
                   </td>
                 </tr>
@@ -517,11 +517,11 @@ export default function ManagerAccounting() {
           
           <div class="summary">
             <div class="summary-row">
-              <span class="summary-label">Total Income:</span>
+              <span class="summary-label">Total Inflow:</span>
               <span class="summary-value" style="color: #16A34A;">₱${totalIncome.toLocaleString()}.00</span>
             </div>
             <div class="summary-row">
-              <span class="summary-label">Total Expenses:</span>
+              <span class="summary-label">Total Outflow:</span>
               <span class="summary-value" style="color: #DC2626;">₱${totalExpense.toLocaleString()}.00</span>
             </div>
             <div class="summary-row summary-total">
@@ -557,12 +557,12 @@ export default function ManagerAccounting() {
         e.description,
         e.notes,
         `₱${e.amount.toLocaleString()}.00`,
-        e.type === 'income' ? 'Income' : 'Expense',
+        e.type === 'income' ? 'Inflow' : 'Outflow',
       ]),
       [],
       ['Summary', '', '', '', ''],
-      ['Total Income', '', '', `₱${filteredCashflowForReport.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0).toLocaleString()}.00`, ''],
-      ['Total Expenses', '', '', `₱${filteredCashflowForReport.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0).toLocaleString()}.00`, ''],
+      ['Total Inflow', '', '', `₱${filteredCashflowForReport.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0).toLocaleString()}.00`, ''],
+      ['Total Outflow', '', '', `₱${filteredCashflowForReport.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0).toLocaleString()}.00`, ''],
       ['Net Cashflow', '', '', `₱${(filteredCashflowForReport.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0) - filteredCashflowForReport.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0)).toLocaleString()}.00`, ''],
     ]
       .map((row) => row.map((cell) => `"${cell}"`).join(','))
@@ -733,7 +733,7 @@ export default function ManagerAccounting() {
               </div>
             </div>
 
-            {/* Monthly Profit */}
+            {/* Net Profit */}
             <div className="bg-white rounded-xl p-4 shadow-lg border-l-4 border-purple-500">
               <div className="flex items-center justify-between">
                 <div>
@@ -794,7 +794,7 @@ export default function ManagerAccounting() {
                     <span className="text-lg font-bold text-red-600">₱{monthlyExpenses.toLocaleString()}.00</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border-2 border-purple-200">
-                    <span className="font-bold text-gray-900">NET PROFIT:</span>
+                    <span className="font-bold text-gray-900">Net Profit:</span>
                     <span className="text-xl font-bold text-purple-600">₱{monthlyProfit.toLocaleString()}.00</span>
                   </div>
                 </div>
@@ -996,7 +996,7 @@ export default function ManagerAccounting() {
                     </p>
                   </div>
                   <div className="p-4 bg-green-50 rounded-lg">
-                    <p className="text-sm text-gray-600 mb-1">Monthly Profit After Exp.</p>
+                    <p className="text-sm text-gray-600 mb-1">Net Profit</p>
                     <p className="text-2xl font-bold text-green-600">₱{monthlyProfit.toLocaleString()}.00</p>
                   </div>
                 </div>
@@ -1098,21 +1098,21 @@ export default function ManagerAccounting() {
               {/* Cash Flow Summary */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-green-500">
-                  <p className="text-gray-600 text-sm font-semibold mb-2">Total Income</p>
+                  <p className="text-gray-600 text-sm font-semibold mb-2">Total Inflow</p>
                   <p className="text-3xl font-bold text-green-600">₱{monthlyCashIncome.toLocaleString()}.00</p>
                   <p className="text-xs text-gray-600 mt-2">
                     {monthlyCashFlowEntries.filter(e => e.type === 'income').length + monthlyBookings.filter(b => ['confirmed', 'completed'].includes(b.status)).length} entries
                   </p>
                 </div>
                 <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-red-500">
-                  <p className="text-gray-600 text-sm font-semibold mb-2">Total Expenses</p>
+                  <p className="text-gray-600 text-sm font-semibold mb-2">Total Outflow</p>
                   <p className="text-3xl font-bold text-red-600">₱{monthlyCashExpense.toLocaleString()}.00</p>
                   <p className="text-xs text-gray-600 mt-2">
                     {monthlyCashFlowEntries.filter(e => e.type === 'expense').length + monthlyBookings.filter(b => b.status === 'confirmed' && getExpenseAmount(b.expenses) > 0).length} entries
                   </p>
                 </div>
                 <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-blue-500">
-                  <p className="text-gray-600 text-sm font-semibold mb-2">Net Cash Flow</p>
+                  <p className="text-gray-600 text-sm font-semibold mb-2">Net Cashflow</p>
                   <p className={`text-3xl font-bold ${monthlyCashIncome - monthlyCashExpense >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
                     ₱{(monthlyCashIncome - monthlyCashExpense).toLocaleString()}.00
                   </p>
@@ -1151,8 +1151,8 @@ export default function ManagerAccounting() {
                       className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
                     >
                       <option value="all">All Types</option>
-                      <option value="income">Income Only</option>
-                      <option value="expense">Expense Only</option>
+                      <option value="income">Inflow Only</option>
+                      <option value="expense">Outflow Only</option>
                     </select>
                   </div>
                   <div>
@@ -1214,8 +1214,8 @@ export default function ManagerAccounting() {
                         onChange={(e) => setNewEntry({ ...newEntry, type: e.target.value as 'income' | 'expense' })}
                         className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black"
                       >
-                        <option value="income">Income</option>
-                        <option value="expense">Expense</option>
+                        <option value="income">Inflow</option>
+                        <option value="expense">Outflow</option>
                       </select>
                     </div>
                     <div>

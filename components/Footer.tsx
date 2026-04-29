@@ -25,6 +25,9 @@ interface ContactInfo {
     facebook: string;
     instagram: string;
     twitter: string;
+    showFacebook?: boolean;
+    showInstagram?: boolean;
+    showTwitter?: boolean;
   };
 }
 
@@ -143,15 +146,16 @@ export default function Footer() {
             <h3 className="font-bold text-lg mb-4">Follow Us</h3>
             <div className="flex gap-4">
               {[
-                { icon: Facebook, href: contactInfo?.social?.facebook || '#', label: 'Facebook' },
-                { icon: Instagram, href: contactInfo?.social?.instagram || '#', label: 'Instagram' },
-                { icon: Twitter, href: contactInfo?.social?.twitter || '#', label: 'Twitter' },
-              ].map(({ icon: Icon, href, label }) => (
+                { icon: Facebook, href: contactInfo?.social?.facebook, label: 'Facebook', show: contactInfo?.social?.showFacebook !== false },
+                { icon: Instagram, href: contactInfo?.social?.instagram, label: 'Instagram', show: contactInfo?.social?.showInstagram !== false },
+                { icon: Twitter, href: contactInfo?.social?.twitter, label: 'Twitter', show: contactInfo?.social?.showTwitter !== false },
+              ].filter(({ show, href }) => show && href)
+                .map(({ icon: Icon, href, label }) => (
                 <motion.a
                   key={label}
                   href={href}
-                  target={href !== '#' ? '_blank' : undefined}
-                  rel={href !== '#' ? 'noopener noreferrer' : undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   whileHover={{ scale: 1.2, rotate: 5 }}
                   whileTap={{ scale: 0.9 }}
                   className="w-10 h-10 backdrop-blur-xl bg-white/70 border-2 border-primary/30 rounded-full flex items-center justify-center shadow-lg"

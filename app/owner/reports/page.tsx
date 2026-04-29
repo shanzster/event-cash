@@ -516,7 +516,7 @@ export default function ManagerReports() {
           <th class="center">Bookings</th>
           <th class="right">Revenue</th>
           <th class="right">Expenses</th>
-          <th class="right">Profit</th>
+          <th class="right">Net Profit</th>
         </tr>
       </thead>
       <tbody>
@@ -625,7 +625,7 @@ export default function ManagerReports() {
     // ── Title block ─────────────────────────────────────────────────────────
     ws.mergeCells('A1:E1');
     const titleCell = ws.getCell('A1');
-    titleCell.value = 'INCOME VS EXPENSES REPORT';
+    titleCell.value = 'Income vs Expenses REPORT';
     titleCell.font = headerFont(WHITE, 16);
     titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AMBER } };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -1157,11 +1157,11 @@ export default function ManagerReports() {
               </div>
             </div>
 
-            {/* Monthly Profit */}
+            {/* Net Profit */}
             <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-green-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-semibold">Monthly Profit</p>
+                  <p className="text-gray-600 text-sm font-semibold">Net Profit</p>
                   <p className="text-3xl font-bold text-gray-900">₱{monthlyProfit.toLocaleString()}.00</p>
                   <p className="text-xs text-gray-500 mt-1">Revenue - Expenses</p>
                 </div>
@@ -1203,7 +1203,7 @@ export default function ManagerReports() {
                   <p className="text-2xl font-bold text-red-600">₱{totalExpenses.toLocaleString()}.00</p>
                 </div>
                 <div className="border-t pt-3">
-                  <p className="text-sm text-gray-600">Total Profit</p>
+                  <p className="text-sm text-gray-600">Net Profit</p>
                   <p className="text-2xl font-bold text-green-600">₱{totalProfit.toLocaleString()}.00</p>
                 </div>
               </div>
@@ -1279,7 +1279,7 @@ export default function ManagerReports() {
                       <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Event Type</th>
                       <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Count</th>
                       <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Revenue</th>
-                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Profit</th>
+                      <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Net Profit</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1466,7 +1466,7 @@ export default function ManagerReports() {
                         <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Date</th>
                         <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Revenue</th>
                         <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Expenses</th>
-                        <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Profit</th>
+                        <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Net Profit</th>
                         <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Margin %</th>
                         <th className="px-6 py-3 text-center text-sm font-bold text-gray-900">Status</th>
                       </tr>
@@ -1548,7 +1548,7 @@ export default function ManagerReports() {
                     <p className="text-xs text-gray-600 mt-2">{totalExpenses > 0 && totalRevenue > 0 ? ((totalExpenses / totalRevenue) * 100).toFixed(1) : 0}% of revenue</p>
                   </div>
                   <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <p className="text-gray-600 text-sm mb-2">Total Profit</p>
+                    <p className="text-gray-600 text-sm mb-2">Net Profit</p>
                     <p className="text-3xl font-bold text-green-600">₱{totalProfit.toLocaleString()}.00</p>
                     <p className="text-xs text-gray-600 mt-2">{totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : 0}% margin</p>
                   </div>
@@ -1749,11 +1749,11 @@ export default function ManagerReports() {
                 animate={{ opacity: 1, y: 0 }}
                 className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
               >
-                {/* Total Income */}
+                {/* Total Inflow */}
                 <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-green-500">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-600 text-sm font-semibold">Total Income</p>
+                      <p className="text-gray-600 text-sm font-semibold">Total Inflow</p>
                       <p className="text-3xl font-bold text-gray-900">₱{transactions.reduce((sum, t) => sum + (t.amount || 0), 0).toLocaleString()}.00</p>
                       <p className="text-xs text-gray-500 mt-1">{transactions.length} transactions</p>
                     </div>
@@ -1761,11 +1761,11 @@ export default function ManagerReports() {
                   </div>
                 </div>
 
-                {/* Total Expenses */}
+                {/* Total Outflow */}
                 <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-red-500">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-600 text-sm font-semibold">Total Expenses</p>
+                      <p className="text-gray-600 text-sm font-semibold">Total Outflow</p>
                       <p className="text-3xl font-bold text-gray-900">₱{transactions.reduce((sum, t) => sum + (t.totalExpenses || 0), 0).toLocaleString()}.00</p>
                       <p className="text-xs text-gray-500 mt-1">All expense items</p>
                     </div>
@@ -1773,13 +1773,13 @@ export default function ManagerReports() {
                   </div>
                 </div>
 
-                {/* Net Profit */}
+                {/* Net Cashflow */}
                 <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-blue-500">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-600 text-sm font-semibold">Net Profit</p>
+                      <p className="text-gray-600 text-sm font-semibold">Net Cashflow</p>
                       <p className="text-3xl font-bold text-gray-900">₱{transactions.reduce((sum, t) => sum + (t.profit || 0), 0).toLocaleString()}.00</p>
-                      <p className="text-xs text-gray-500 mt-1">Income - Expenses</p>
+                      <p className="text-xs text-gray-500 mt-1">Inflow - Outflow</p>
                     </div>
                     <TrendingUp size={40} className="text-blue-500" />
                   </div>
@@ -1803,7 +1803,7 @@ export default function ManagerReports() {
                         <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Month</th>
                         <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Income</th>
                         <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Expenses</th>
-                        <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Profit</th>
+                        <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Net Profit</th>
                         <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Transactions</th>
                       </tr>
                     </thead>
@@ -1850,7 +1850,7 @@ export default function ManagerReports() {
                         <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Event Type</th>
                         <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Income</th>
                         <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Expenses</th>
-                        <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Profit</th>
+                        <th className="px-6 py-3 text-right text-sm font-bold text-gray-900">Net Profit</th>
                         <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Date</th>
                       </tr>
                     </thead>

@@ -196,15 +196,15 @@ export default function StaffAccountingPage() {
         return `<tr>
           <td>${dateStr}</td><td>${e.description}</td><td>${e.notes||''}</td>
           <td style="color:${e.type==='income'?'#16A34A':'#DC2626'}">${e.type==='income'?'+':'-'}₱${e.amount.toLocaleString()}.00</td>
-          <td><span class="${e.type}">${e.type==='income'?'Income':'Expense'}</span></td>
+          <td><span class="${e.type}">${e.type==='income'?'Inflow':'Outflow'}</span></td>
         </tr>`;
       } catch {
         return `<tr><td>Invalid Date</td><td>${e.description}</td><td>${e.notes||''}</td><td>₱${e.amount.toLocaleString()}.00</td><td>${e.type}</td></tr>`;
       }
     }).join('')}</tbody></table>
     <div class="summary">
-      <div class="sr"><span>Total Income:</span><span style="color:#16A34A">₱${totalIncome.toLocaleString()}.00</span></div>
-      <div class="sr"><span>Total Expenses:</span><span style="color:#DC2626">₱${totalExpense.toLocaleString()}.00</span></div>
+      <div class="sr"><span>Total Inflow:</span><span style="color:#16A34A">₱${totalIncome.toLocaleString()}.00</span></div>
+      <div class="sr"><span>Total Outflow:</span><span style="color:#DC2626">₱${totalExpense.toLocaleString()}.00</span></div>
       <div class="sr" style="border-top:2px solid #ccc;padding-top:8px;font-weight:bold">
         <span>Net Cashflow:</span><span>₱${(totalIncome-totalExpense).toLocaleString()}.00</span></div>
     </div></body></html>`);
@@ -221,15 +221,15 @@ export default function StaffAccountingPage() {
           const dateStr = isNaN(d.getTime()) ? 'Invalid Date' : format(d,'MMM dd, yyyy');
           return [
             dateStr, e.description, e.notes||'',
-            `₱${e.amount.toLocaleString()}.00`, e.type==='income'?'Income':'Expense',
+            `₱${e.amount.toLocaleString()}.00`, e.type==='income'?'Inflow':'Outflow',
           ];
         } catch {
           return ['Invalid Date', e.description, e.notes||'', `₱${e.amount.toLocaleString()}.00`, e.type];
         }
       }),
       [],
-      [], ['Total Income','','',`₱${filteredCashflowForReport.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0).toLocaleString()}.00`,''],
-      ['Total Expenses','','',`₱${filteredCashflowForReport.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0).toLocaleString()}.00`,''],
+      [], ['Total Inflow','','',`₱${filteredCashflowForReport.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0).toLocaleString()}.00`,''],
+      ['Total Outflow','','',`₱${filteredCashflowForReport.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0).toLocaleString()}.00`,''],
     ].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([rows], { type: 'text/csv' }));
@@ -340,7 +340,7 @@ export default function StaffAccountingPage() {
                     </div>
                   ))}
                   <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border-2 border-purple-200">
-                    <span className="font-bold text-gray-900">NET PROFIT:</span>
+                    <span className="font-bold text-gray-900">Net Profit:</span>
                     <span className="text-xl font-bold text-purple-600">₱{monthlyProfit.toLocaleString()}.00</span>
                   </div>
                 </div>
@@ -480,7 +480,7 @@ export default function StaffAccountingPage() {
                     <p className="text-2xl font-bold text-purple-600">{monthlyRevenue > 0 ? ((monthlyExpenses / monthlyRevenue) * 100).toFixed(1) : 0}%</p>
                   </div>
                   <div className="p-4 bg-green-50 rounded-lg">
-                    <p className="text-sm text-gray-600 mb-1">Monthly Profit After Exp.</p>
+                    <p className="text-sm text-gray-600 mb-1">Net Profit</p>
                     <p className="text-2xl font-bold text-green-600">₱{monthlyProfit.toLocaleString()}.00</p>
                   </div>
                 </div>
@@ -506,9 +506,9 @@ export default function StaffAccountingPage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { label: 'Total Income', value: monthlyCashIncome, color: 'border-green-500', textColor: 'text-green-600' },
-                  { label: 'Total Expenses', value: monthlyCashExpense, color: 'border-red-500', textColor: 'text-red-600' },
-                  { label: 'Net Cash Flow', value: monthlyCashIncome - monthlyCashExpense, color: 'border-blue-500', textColor: monthlyCashIncome - monthlyCashExpense >= 0 ? 'text-blue-600' : 'text-red-600' },
+                  { label: 'Total Inflow', value: monthlyCashIncome, color: 'border-green-500', textColor: 'text-green-600' },
+                  { label: 'Total Outflow', value: monthlyCashExpense, color: 'border-red-500', textColor: 'text-red-600' },
+                  { label: 'Net Cashflow', value: monthlyCashIncome - monthlyCashExpense, color: 'border-blue-500', textColor: monthlyCashIncome - monthlyCashExpense >= 0 ? 'text-blue-600' : 'text-red-600' },
                 ].map((m, i) => (
                   <div key={i} className={`bg-white rounded-xl p-6 shadow-lg border-l-4 ${m.color}`}>
                     <p className="text-gray-600 text-sm font-semibold mb-2">{m.label}</p>
@@ -538,7 +538,7 @@ export default function StaffAccountingPage() {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Entry Type</label>
                     <select value={reportFilters.type} onChange={e => setReportFilters({...reportFilters, type: e.target.value})}
                       className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black">
-                      <option value="all">All Types</option><option value="income">Income Only</option><option value="expense">Expense Only</option>
+                      <option value="all">All Types</option><option value="income">Inflow Only</option><option value="expense">Outflow Only</option>
                     </select>
                   </div>
                   <div>
@@ -571,7 +571,7 @@ export default function StaffAccountingPage() {
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Type</label>
                       <select value={newEntry.type} onChange={e => setNewEntry({...newEntry, type: e.target.value as 'income'|'expense'})}
                         className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-black">
-                        <option value="income">Income</option><option value="expense">Expense</option>
+                        <option value="income">Inflow</option><option value="expense">Outflow</option>
                       </select>
                     </div>
                     <div>
@@ -646,7 +646,7 @@ export default function StaffAccountingPage() {
                             <td className="px-6 py-4 text-center">
                               <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 justify-center w-fit mx-auto ${entry.type==='income'?'bg-green-100 text-green-800':'bg-red-100 text-red-800'}`}>
                                 {entry.type==='income'?<ArrowUp size={12}/>:<ArrowDown size={12}/>}
-                                {entry.type==='income'?'Income':'Expense'}
+                                {entry.type==='income'?'Inflow':'Outflow'}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-center">
