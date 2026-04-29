@@ -340,8 +340,6 @@ export default function StaffReportsPage() {
     a.download = filename;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  };
 
   if (loadingData) return (
     <StaffSidebar>
